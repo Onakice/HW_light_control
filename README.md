@@ -1,31 +1,30 @@
-# Light Control
+# Light Control — ECC 503 & 504
 
-A Node.js web application to monitor and control four Tuya smart switches from a browser.
+A Node.js web application for monitoring and controlling Tuya smart switches in rooms ECC 503 and 504, served through a browser dashboard.
 
 ## Overview
 
-The server communicates with the Tuya OpenAPI using HMAC-SHA256 signed requests and automatically refreshes its access token before it expires. A dark-themed dashboard is served directly by the Express server.
+The Express server communicates with the Tuya OpenAPI using HMAC-SHA256 signed requests. Access tokens are fetched automatically and refreshed before expiry — no manual token management needed. The web dashboard mirrors the physical room layout and reflects live device state.
 
-**Features:**
-- Control 4 smart switches (SW1–SW4) individually
-- Live state polling — dashboard auto-refreshes every 10 seconds
-- Optimistic UI feedback on button clicks
-- Token auto-refresh — no manual token management needed
+**Current status:**
+- Room 504 — fully implemented (8 logical zones → 4 Tuya devices)
+- Room 503 — UI placeholder only, not yet wired to hardware
 
 ## Prerequisites
 
 - Node.js v18 or newer
-- npm (bundled with Node.js)
-- A Tuya IoT Platform project with linked devices
-- Your Tuya Client ID and Secret from the platform console
+- npm
+- A Tuya IoT Platform project with the 4 switch devices linked
 
 ## Project Structure
 
 ```
 HW_light_control/
-├── server.js          # Express server + Tuya API logic
+├── server.js          # Express server + Tuya OpenAPI logic
 ├── public/
-│   └── index.html     # Web dashboard (served on /)
+│   └── index.html     # Web dashboard (room layout, switch panels, AC controls)
+├── .env               # Secrets — never commit this
+├── .env.example       # Safe template for onboarding
 ├── package.json
 └── README.md
 ```
@@ -38,30 +37,33 @@ npm install
 
 ## Configuration
 
-Open `server.js` and update the constants at the top:
+Copy `.env.example` to `.env` and fill in your values:
 
-```js
-const CLIENT_ID = 'your_client_id';
-const SECRET    = 'your_secret_key';
-const BASE_URL  = 'https://openapi-sg.iotbing.com'; // change to your region
-
-const DEVICES = {
-  sw1: 'device_id_for_switch_1',
-  sw2: 'device_id_for_switch_2',
-  sw3: 'device_id_for_switch_3',
-  sw4: 'device_id_for_switch_4',
-};
+```bash
+cp .env.example .env
 ```
 
-**Where to find your credentials:**
-- `CLIENT_ID` / `SECRET` — Tuya IoT Platform → Cloud → your project → Overview tab
-- `DEVICE_ID` — Tuya IoT Platform → Cloud → your project → Devices tab
+```env
+TUYA_CLIENT_ID=your_client_id
+TUYA_SECRET=your_secret_key
+TUYA_BASE_URL=https://openapi-sg.iotbing.com
+PORT=3000
+
+DEVICE_SW1=device_id_for_sw1
+DEVICE_SW2=device_id_for_sw2
+DEVICE_SW3=device_id_for_sw3
+DEVICE_SW4=device_id_for_sw4
+```
+
+**Where to find credentials:**
+- `TUYA_CLIENT_ID` / `TUYA_SECRET` — Tuya IoT Platform → Cloud → your project → Overview
+- `DEVICE_SW*` — Tuya IoT Platform → Cloud → your project → Devices tab
 
 **Base URL by region:**
 
 | Region | URL |
 |---|---|
-| Singapore | `https://openapi-sg.iotbing.com` |
+| Singapore (current) | `https://openapi-sg.iotbing.com` |
 | US West | `https://openapi.tuyaus.com` |
 | Europe | `https://openapi.tuyaeu.com` |
 | China | `https://openapi.tuyacn.com` |
@@ -73,50 +75,74 @@ const DEVICES = {
 node server.js
 ```
 
-Then open **http://localhost:3000** in your browser.
+Open **http://localhost:3000** in your browser.
 
-> The server must be running whenever you want to use the dashboard. Opening `index.html` directly as a file will not work.
+> The server must be running to use the dashboard. Do not open `index.html` as a file directly.
+
+## Switch Mapping (Room 504)
+
+Each physical Tuya device has two channels (`switch_1`, `switch_2`). The mapping to logical zones is:
+
+| Zone (UI) | Device | Channel |
+|---|---|---|
+| Special | sw1 | switch_1 |
+| zone-1 | sw1 | switch_2 |
+| zone-2 | sw2 | switch_1 |
+| zone-3 | sw2 | switch_2 |
+| zone-4 | sw3 | switch_1 |
+| zone-5 | sw3 | switch_2 |
+| zone-6 | sw4 | switch_1 |
+| zone-7 | sw4 | switch_2 |
+
+This mapping is defined at the top of `public/index.html` in the `SWITCH_TO_DEVICE` constant and can be updated when wiring changes.
+
+Room 503 switches (Sw-1 to Sw-4) are shown in the UI but set to `null` in `SWITCH_TO_DEVICE` — they are grayed out and make no API calls until hardware is installed.
 
 ## Web Dashboard
 
-Each switch card shows:
-- Switch name and device ID
-- Current state (**ON** / **OFF**) with a colour-coded indicator dot
-- **ON** and **OFF** buttons
-- An inline error message if a request fails
+The dashboard replicates the physical room layout:
 
-The **Refresh All** button fetches live state of all four switches. The page also polls automatically every 10 seconds.
+- **Switch panel** — click any zone button to toggle it; grayed-out buttons are not yet wired
+- **Light grid** — each cell reflects the live state of its controlling zone switch
+- **AC controls** — UI-only state for now (not connected to Tuya)
+- **Left sidebar** — shows count of lights currently on
+- **Right sidebar** — row-by-row controls for room 504
+- **Auto-refresh** — polls all device states every 10 seconds; optimistic UI on button clicks
 
 ## API Reference
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/` | Serves the web dashboard |
-| `GET` | `/health` | Health check — returns `{ status: "ok" }` |
-| `GET` | `/switch/:sw/state` | Returns `{ sw, state: true/false }` for one switch |
-| `GET` | `/switches/state` | Returns state of all four switches |
-| `POST` | `/switch/:sw/on` | Turns the specified switch ON |
-| `POST` | `/switch/:sw/off` | Turns the specified switch OFF |
+| `GET` | `/` | Web dashboard |
+| `GET` | `/health` | Health check → `{ status: "ok" }` |
+| `GET` | `/switch/:sw/state` | State of one device → `{ sw, switch_1: bool, switch_2: bool }` |
+| `GET` | `/switches/state` | State of all 4 devices |
+| `POST` | `/switch/:sw/:channel/on` | Turn a channel ON |
+| `POST` | `/switch/:sw/:channel/off` | Turn a channel OFF |
 
-`:sw` is one of `sw1`, `sw2`, `sw3`, `sw4`.
+`:sw` = `sw1`–`sw4`, `:channel` = `1` or `2`
 
 ## How It Works
 
-### Authentication
+### Signing
 
 Tuya OpenAPI requires every request to be signed with HMAC-SHA256.
 
-**Token endpoint** — signed without an access token:
+**Token endpoint** (no access token yet):
 ```
 sign_input = CLIENT_ID + timestamp + stringToSign
 ```
 
-**All other endpoints** — signed with the access token:
+**All other endpoints** (with access token):
 ```
 sign_input = CLIENT_ID + ACCESS_TOKEN + timestamp + stringToSign
 ```
 
-Access tokens are valid for 7200 seconds. The server caches the token and fetches a new one 60 seconds before expiry automatically.
+Where `stringToSign = METHOD\n SHA256(body)\n\n path`.
+
+### Token Refresh
+
+Access tokens expire after 7200 seconds. The server caches the token and fetches a new one automatically 60 seconds before expiry.
 
 ### Device Commands
 
@@ -135,11 +161,12 @@ GET /v1.0/iot-03/devices/{device_id}/status
 
 | Problem | Fix |
 |---|---|
-| Dashboard shows blank / `Cannot GET /` | Open `http://localhost:3000`, not the HTML file directly |
-| All cards show `—` | Token fetch failed — check `CLIENT_ID` and `SECRET` |
-| Cards show `Failed to fetch state` | Device ID is wrong or the device is offline |
-| `Port 3000 already in use` | Stop the other process or change the port in `server.js` |
-| `Token fetch failed` in console | Wrong credentials or `BASE_URL` doesn't match your region |
+| Dashboard shows blank page | Open `http://localhost:3000`, not the HTML file directly |
+| All lights show `—` or loading forever | Token fetch failed — check `TUYA_CLIENT_ID` and `TUYA_SECRET` in `.env` |
+| A zone switch is grayed out | That zone is set to `null` in `SWITCH_TO_DEVICE` — update the mapping |
+| Light state doesn't match reality | Click the switch again; the device may have been toggled physically |
+| Port 3000 already in use | Change `PORT` in `.env` or stop the conflicting process |
+| `Token fetch failed` in console | Wrong credentials or `TUYA_BASE_URL` doesn't match your account region |
 
 ## Dependencies
 
@@ -147,4 +174,5 @@ GET /v1.0/iot-03/devices/{device_id}/status
 |---|---|
 | `express` | HTTP server and routing |
 | `axios` | HTTP client for Tuya API calls |
+| `dotenv` | Loads `.env` into `process.env` |
 | `crypto` | HMAC-SHA256 signing (Node.js built-in) |

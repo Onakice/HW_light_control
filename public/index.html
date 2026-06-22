@@ -1,282 +1,745 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Light Control</title>
+  <title>SmartControl — ECC 503 & 504</title>
   <style>
+    /* ── Reset ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --bg: #0f1117;
-      --card: #1a1d27;
-      --card-on: #1c2a1e;
-      --border: #2a2d3a;
-      --border-on: #2d5c35;
-      --text: #e2e4ec;
-      --muted: #6b7280;
-      --on-color: #34d058;
-      --off-color: #6b7280;
-      --btn-on: #238636;
-      --btn-on-hover: #2ea043;
-      --btn-off: #21262d;
-      --btn-off-hover: #30363d;
-      --danger: #f85149;
-      --ch2-accent: #58a6ff;
-      --ch2-btn-on: #1158a7;
-      --ch2-btn-on-hover: #1a6fcc;
-      --radius: 14px;
-    }
-
     body {
-      background: var(--bg);
-      color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f8f9fb;
+      color: #111827;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px 16px;
     }
 
-    header { text-align: center; margin-bottom: 36px; }
-    header h1 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.5px; }
-    header p { color: var(--muted); font-size: 0.875rem; margin-top: 6px; }
-
-    .refresh-bar {
-      display: flex; align-items: center; gap: 10px; margin-bottom: 28px;
-    }
-    .refresh-bar button {
-      padding: 7px 18px; background: var(--btn-off); color: var(--text);
-      border: 1px solid var(--border); border-radius: 8px; font-size: 0.82rem;
-      cursor: pointer; transition: background 0.15s;
-    }
-    .refresh-bar button:hover { background: var(--btn-off-hover); }
-    .refresh-label { color: var(--muted); font-size: 0.82rem; }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px;
-      width: 100%;
-      max-width: 1000px;
+    /* ── Loading screen ── */
+    #loading-screen {
+      position: fixed; inset: 0; z-index: 100;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; font-weight: 700; color: #6b7280;
     }
 
-    /* ── Device card ── */
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
+    /* ── App shell: sidebar | main | sidebar ── */
+    #app { display: flex; min-height: 100vh; }
 
-    .card-header {
-      display: flex; align-items: center; justify-content: space-between;
+    /* ── Sidebars ── */
+    .sidebar {
+      width: 280px; flex-shrink: 0;
+      background: #fff;
+      border-right: 1px solid #f0f0f4;
+      padding: 28px 20px;
+      position: sticky; top: 0; height: 100vh;
+      overflow-y: auto;
+      display: flex; flex-direction: column; gap: 28px;
     }
-    .card-title { font-size: 1.05rem; font-weight: 700; }
-    .device-id {
-      font-size: 0.68rem; color: var(--muted);
-      font-family: "SF Mono", "Fira Code", monospace; word-break: break-all;
-    }
+    .sidebar-right { border-right: none; border-left: 1px solid #f0f0f4; }
 
-    /* ── Channel row ── */
-    .channel {
-      background: #12151f;
-      border: 1px solid var(--border);
-      border-radius: 10px;
+    .sidebar-brand h1 { font-size: 1.2rem; font-weight: 900; color: #2563eb; letter-spacing: -0.5px; }
+    .sidebar-brand p  { font-size: 0.7rem; color: #9ca3af; font-weight: 600; margin-top: 2px; }
+
+    /* ── Stat cards ── */
+    .stat-card {
       padding: 14px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      border-radius: 16px;
+      border: 1px solid #f0f0f4;
+      background: #fff;
+      transition: all 0.2s;
+    }
+    .stat-card.active { background: #eff6ff; border-color: #dbeafe; }
+    .stat-icon {
+      width: 34px; height: 34px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      background: #f3f4f6; color: #9ca3af;
+      margin-bottom: 10px;
+    }
+    .stat-card.active .stat-icon { background: #3b82f6; color: #fff; }
+    .stat-value { font-size: 1.5rem; font-weight: 800; color: #1f2937; display: inline; }
+    .stat-card.active .stat-value { color: #1d4ed8; }
+    .stat-unit  { font-size: 0.6rem; font-weight: 600; color: #9ca3af; text-transform: uppercase; margin-left: 3px; }
+    .stat-label { font-size: 0.72rem; font-weight: 600; color: #6b7280; margin-top: 2px; }
+
+    /* ── Main content ── */
+    main {
+      flex: 1;
+      overflow-x: auto;
+      display: flex; flex-direction: column;
+    }
+    .main-header {
+      padding: 20px 28px;
+      background: #fff;
+      border-bottom: 1px solid #f0f0f4;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+      flex-shrink: 0;
+    }
+    .main-header h2 { font-size: 0.82rem; font-weight: 800; color: #1f2937; }
+    .legend { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 700; color: #9ca3af; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; }
+
+    /* ── Room container ── */
+    .rooms-wrap {
+      flex: 1;
+      display: flex; align-items: flex-start;
+      padding: 28px; gap: 0;
+    }
+    .rooms-card {
+      display: flex; align-items: stretch;
+      border: 1px solid #e5e7eb;
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.06);
     }
 
-    .channel-info { flex: 1; }
-    .channel-label { font-size: 0.78rem; font-weight: 700; color: var(--muted); }
-    .channel-state {
-      font-size: 1rem; font-weight: 800;
-      color: var(--off-color);
-      transition: color 0.3s;
+    /* ── Room panels ── */
+    .room {
+      background: #fff;
+      padding: 28px 24px;
+      display: flex; flex-direction: column; gap: 0;
     }
-    .channel-state.on  { color: var(--on-color); }
-    .channel-state.on2 { color: var(--ch2-accent); }
-    .channel-state.loading { color: var(--muted); font-size: 0.85rem; }
+    .room-503 { min-width: 360px; border-right: 1px solid #f0f0f4; }
+    .room-504 { min-width: 700px; }
 
-    .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--off-color); flex-shrink: 0;
-      transition: background 0.3s, box-shadow 0.3s;
+    .section-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.75rem; font-weight: 900;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 0;
     }
-    .dot.on  { background: var(--on-color);  box-shadow: 0 0 6px var(--on-color); }
-    .dot.on2 { background: var(--ch2-accent); box-shadow: 0 0 6px var(--ch2-accent); }
+    .section-bar { width: 4px; height: 20px; border-radius: 4px; }
 
-    .btn-pair { display: flex; gap: 6px; }
+    /* ── Switch panel ── */
+    .switch-panel { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #f3f4f6; }
+    .switch-grid-503 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+    .switch-grid-504 { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-top: 14px; }
 
-    button {
-      padding: 7px 14px;
-      border: none; border-radius: 7px;
-      font-size: 0.78rem; font-weight: 700;
-      cursor: pointer; transition: background 0.15s, opacity 0.15s;
+    .sw-btn {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 10px 4px;
+      border-radius: 16px;
+      border: 2px solid #e5e7eb;
+      background: #fff;
+      cursor: pointer;
+      transition: all 0.2s;
+      gap: 4px;
+      color: #9ca3af;
     }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .sw-btn:hover { border-color: #d1d5db; }
+    .sw-btn.active { background: #fbbf24; border-color: #f59e0b; color: #fff; box-shadow: 0 4px 12px rgba(251,191,36,0.3); }
+    .sw-btn.disabled { opacity: 0.35; cursor: not-allowed; }
+    .sw-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .sw-btn span { font-size: 0.6rem; font-weight: 900; }
 
-    .btn-on  { background: var(--btn-on);  color: #fff; }
-    .btn-on:hover:not(:disabled)  { background: var(--btn-on-hover); }
+    /* ── Light grid ── */
+    .light-section { margin-top: 24px; }
+    .light-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .light-grid-503 { display: grid; grid-template-columns: repeat(2, 80px); gap: 20px 40px; justify-content: center; }
+    .light-grid-504 { display: grid; grid-template-columns: repeat(7, 80px); gap: 20px 18px; justify-content: center; }
 
-    .btn-on2  { background: var(--ch2-btn-on); color: #fff; }
-    .btn-on2:hover:not(:disabled) { background: var(--ch2-btn-on-hover); }
-
-    .btn-off { background: var(--btn-off); color: var(--text); border: 1px solid var(--border); }
-    .btn-off:hover:not(:disabled) { background: var(--btn-off-hover); }
-
-    .error-msg { font-size: 0.72rem; color: var(--danger); min-height: 16px; }
-
-    footer {
-      margin-top: 48px; color: var(--muted); font-size: 0.78rem; text-align: center;
+    .light-cell {
+      width: 80px; height: 100px;
+      border-radius: 16px;
+      border: 2px solid #e5e7eb;
+      background: #fff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      position: relative;
+      transition: all 0.4s;
+      cursor: default;
     }
+    .light-cell.on { background: #fffbeb; border-color: #fcd34d; box-shadow: 0 4px 16px rgba(251,191,36,0.18); }
+    .light-cell-label {
+      position: absolute; top: 7px;
+      font-size: 0.55rem; font-weight: 800;
+      color: #374151;
+    }
+    .light-cell.on .light-cell-label { color: #d97706; }
+    .light-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: #e5e7eb;
+      transition: all 0.3s;
+    }
+    .light-cell.on .light-dot { background: #f59e0b; transform: scale(1.25); box-shadow: 0 0 8px rgba(245,158,11,0.5); }
+    .light-cell-id {
+      margin-top: 6px;
+      font-size: 0.55rem; font-family: monospace; color: #9ca3af;
+    }
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 4px 10px; border-radius: 8px;
+      font-size: 0.62rem; font-weight: 800; text-transform: uppercase;
+    }
+    .badge-switch { background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; }
+    .badge-door   { background: #111827; color: #fff; }
 
-    /* channel 1 = green accent, channel 2 = blue accent */
+    /* ── AC section ── */
+    .ac-section { margin-top: 28px; padding-top: 24px; border-top: 1px solid #f3f4f6; }
+    .ac-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .ac-grid-503 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .ac-grid-504 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+    .ac-card {
+      border-radius: 20px; border: 2px solid #f3f4f6;
+      background: #fff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 20px 8px;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+    .ac-card:hover { border-color: #e5e7eb; }
+    .ac-card.on { background: #eff6ff; border-color: #bfdbfe; box-shadow: 0 4px 12px rgba(59,130,246,0.1); }
+    .ac-icon {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      background: #f3f4f6; color: #d1d5db;
+      margin-bottom: 8px;
+      transition: all 0.25s;
+    }
+    .ac-card.on .ac-icon { background: #3b82f6; color: #fff; }
+    .ac-name  { font-size: 0.62rem; font-weight: 900; text-transform: uppercase; color: #9ca3af; }
+    .ac-card.on .ac-name { color: #1d4ed8; }
+    .ac-status { font-size: 0.5rem; font-weight: 700; color: #d1d5db; margin-top: 2px; }
+    .ac-card.on .ac-status { color: #60a5fa; }
+
+    /* ── Right sidebar buttons ── */
+    .ctrl-label { font-size: 0.62rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+    .btn-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn {
+      padding: 10px; border-radius: 12px;
+      font-size: 0.72rem; font-weight: 800;
+      border: none; cursor: pointer; transition: all 0.15s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-secondary { background: #f3f4f6; color: #4b5563; }
+    .btn-secondary:hover { background: #e5e7eb; }
+
+    .row-btn {
+      width: 100%; display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      background: #eff6ff; border: 1px solid #dbeafe;
+      border-radius: 12px; cursor: pointer; transition: all 0.15s;
+    }
+    .row-btn:hover { background: #dbeafe; border-color: #93c5fd; }
+    .row-btn-text { flex: 1; text-align: left; }
+    .row-btn-name  { font-size: 0.72rem; font-weight: 800; color: #1e40af; }
+    .row-btn-count { font-size: 0.62rem; color: #3b82f6; font-weight: 600; }
+    .row-btn-icon {
+      width: 24px; height: 24px; border-radius: 8px;
+      background: #bfdbfe; display: flex; align-items: center; justify-content: center;
+      color: #1d4ed8;
+    }
+    .row-space { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+
+    /* ── Error toast ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 200;
+      background: #ef4444; color: #fff;
+      padding: 10px 18px; border-radius: 12px;
+      font-size: 0.8rem; font-weight: 700;
+      display: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
   </style>
 </head>
 <body>
 
-<header>
-  <h1>Light Control</h1>
-  <p>Tuya Smart Switch Dashboard</p>
-</header>
+<div id="loading-screen">กำลังเชื่อมต่อระบบ SmartControl…</div>
+<div id="toast"></div>
 
-<div class="refresh-bar">
-  <button id="refresh-btn" onclick="refreshAll()">&#8635; Refresh all</button>
-  <span class="refresh-label" id="last-updated">—</span>
-</div>
+<div id="app" style="display:none">
 
-<div class="grid" id="grid"></div>
+  <!-- ── Left Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <h1>SmartControl</h1>
+      <p>ระบบบริหารจัดการพลังงาน</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <!-- Users stat (static) -->
+      <div class="stat-card">
+        <div class="stat-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div><span class="stat-value">88</span><span class="stat-unit">คน</span></div>
+        <div class="stat-label">จำนวนผู้อยู่ในห้อง</div>
+      </div>
+      <!-- Lights on (dynamic) -->
+      <div class="stat-card active">
+        <div class="stat-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+        </div>
+        <div><span class="stat-value" id="lights-on-count">0</span><span class="stat-unit">ดวง</span></div>
+        <div class="stat-label">เปิดไฟทิ้งไว้</div>
+      </div>
+      <!-- Session time (static) -->
+      <div class="stat-card">
+        <div class="stat-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div><span class="stat-value" id="session-time">0.0</span><span class="stat-unit">ชม.</span></div>
+        <div class="stat-label">ระยะเวลาใช้งานวันนี้</div>
+      </div>
+    </div>
+  </aside>
 
-<footer>Auto-refreshes every 10 s &nbsp;·&nbsp; Tuya OpenAPI</footer>
+  <!-- ── Main ── -->
+  <main>
+    <div class="main-header">
+      <h2>ผังหลอดไฟ และแอร์ ภายในห้อง ECC 503 และ 504</h2>
+      <div class="legend"><span class="legend-dot"></span> สถานะเปิด</div>
+    </div>
+
+    <div class="rooms-wrap">
+      <div class="rooms-card">
+
+        <!-- ══ Room 503 ══ -->
+        <div class="room room-503">
+          <!-- Switch panel 503 -->
+          <div class="switch-panel">
+            <div class="section-title">
+              <div class="section-bar" style="background:#ef4444"></div>
+              แผงสวิตช์ควบคุม 503
+            </div>
+            <div class="switch-grid-503" id="switch-panel-503"></div>
+          </div>
+
+          <!-- Lights 503 -->
+          <div class="light-section">
+            <div class="light-section-header">
+              <div class="section-title">
+                <div class="section-bar" style="background:#3b82f6"></div>
+                ผังหลอดไฟ ห้อง 503
+              </div>
+              <div style="display:flex;gap:6px;">
+                <span class="badge badge-switch">Switch</span>
+                <span class="badge badge-door">Door</span>
+              </div>
+            </div>
+            <div class="light-grid-503" id="light-grid-503"></div>
+          </div>
+
+          <!-- AC 503 -->
+          <div class="ac-section">
+            <div class="ac-section-header">
+              <div class="section-title">
+                <div class="section-bar" style="background:#3b82f6"></div>
+                เครื่องปรับอากาศ
+              </div>
+            </div>
+            <div class="ac-grid-503" id="ac-grid-503"></div>
+          </div>
+        </div>
+
+        <!-- ══ Room 504 ══ -->
+        <div class="room room-504">
+          <!-- Switch panel 504 -->
+          <div class="switch-panel">
+            <div class="section-title">
+              <div class="section-bar" style="background:#f97316"></div>
+              แผงสวิตช์ควบคุม 504
+            </div>
+            <div class="switch-grid-504" id="switch-panel-504"></div>
+          </div>
+
+          <!-- Lights 504 -->
+          <div class="light-section">
+            <div class="light-section-header">
+              <div class="section-title">
+                <div class="section-bar" style="background:#3b82f6"></div>
+                ผังหลอดไฟ ห้อง 504
+              </div>
+              <div style="display:flex;gap:6px;">
+                <span class="badge badge-switch">Switch</span>
+                <span class="badge badge-door">Door</span>
+              </div>
+            </div>
+            <div class="light-grid-504" id="light-grid-504"></div>
+          </div>
+
+          <!-- AC 504 -->
+          <div class="ac-section">
+            <div class="ac-section-header">
+              <div class="section-title">
+                <div class="section-bar" style="background:#3b82f6"></div>
+                เครื่องปรับอากาศ
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary" style="padding:6px 14px;font-size:0.68rem;" onclick="setAllAir('mainZone', true)">เปิดทั้งหมด</button>
+                <button class="btn btn-secondary" style="padding:6px 14px;font-size:0.68rem;" onclick="setAllAir('mainZone', false)">ปิดทั้งหมด</button>
+              </div>
+            </div>
+            <div class="ac-grid-504" id="ac-grid-504"></div>
+          </div>
+        </div>
+
+      </div><!-- /rooms-card -->
+    </div><!-- /rooms-wrap -->
+  </main>
+
+  <!-- ── Right Sidebar ── -->
+  <aside class="sidebar sidebar-right">
+    <div>
+      <div class="ctrl-label">การควบคุมหลัก</div>
+      <div class="btn-pair">
+        <button class="btn btn-primary" onclick="setAllLights(true)">เปิดทั้งหมด</button>
+        <button class="btn btn-secondary" onclick="setAllLights(false)">ปิดทั้งหมด</button>
+      </div>
+    </div>
+    <div style="border-top:1px solid #f0f0f4;padding-top:20px;">
+      <div class="ctrl-label">ควบคุมตามแถว (504)</div>
+      <div class="row-space" id="row-controls"></div>
+    </div>
+  </aside>
+
+</div><!-- /app -->
 
 <script>
-  const SWITCHES = [
-    { id: "sw1", label: "Switch 1", device: "a3e863268d4c0d259dqtbe" },
-    { id: "sw2", label: "Switch 2", device: "a33a1415dc4aeb626az6ba" },
-    { id: "sw3", label: "Switch 3", device: "a376073de72bb6b235bbln" },
-    { id: "sw4", label: "Switch 4", device: "a3e59fd6e1dab69fc1sqpc" },
-  ];
+// ══════════════════════════════════════════════════════════════════════════════
+// CONFIG — Update SWITCH_TO_DEVICE once you have the wiring diagram.
+// Each logical switch name maps to a Tuya device + channel (1 or 2).
+// Set to null if a switch is not yet wired to a Tuya device.
+// ══════════════════════════════════════════════════════════════════════════════
+const SWITCH_TO_DEVICE = {
+  // Room 503 — not yet implemented
+  "Sw-1": null,
+  "Sw-2": null,
+  "Sw-3": null,
+  "Sw-4": null,
+  // Room 504
+  "Special": { sw: "sw1", channel: "1" },
+  "zone-1":  { sw: "sw1", channel: "2" },
+  "zone-2":  { sw: "sw2", channel: "1" },
+  "zone-3":  { sw: "sw2", channel: "2" },
+  "zone-4":  { sw: "sw3", channel: "1" },
+  "zone-5":  { sw: "sw3", channel: "2" },
+  "zone-6":  { sw: "sw4", channel: "1" },
+  "zone-7":  { sw: "sw4", channel: "2" },
+};
 
-  // Build cards — each with two channel rows
-  const grid = document.getElementById("grid");
-  SWITCHES.forEach(({ id, label, device }) => {
-    grid.insertAdjacentHTML("beforeend", `
-      <div class="card" id="card-${id}">
-        <div class="card-header">
-          <span class="card-title">${label}</span>
-        </div>
-        <div class="device-id">${device}</div>
+// Light index → switch name (Room 504, 28 lights in 7 columns × 4 rows)
+const SWITCH_MAP_504 = {
+  "zone-7":  [0, 7, 14, 21],
+  "zone-6":  [1, 15, 22],
+  "zone-5":  [2, 9, 16, 23],
+  "zone-4":  [3, 17, 24],
+  "zone-3":  [4, 11, 18, 25],
+  "zone-2":  [5, 19, 26],
+  "zone-1":  [6, 13, 20, 27],
+  "Special": [12, 10, 8],
+};
 
-        ${[1, 2].map(ch => `
-        <div class="channel" id="channel-${id}-${ch}">
-          <span class="dot" id="dot-${id}-${ch}"></span>
-          <div class="channel-info">
-            <div class="channel-label">Channel ${ch}</div>
-            <div class="channel-state loading" id="state-${id}-${ch}">…</div>
-          </div>
-          <div class="btn-pair">
-            <button class="btn-on${ch === 2 ? '2' : ''}" id="btn-on-${id}-${ch}"
-              onclick="control('${id}','${ch}','on')" disabled>ON</button>
-            <button class="btn-off" id="btn-off-${id}-${ch}"
-              onclick="control('${id}','${ch}','off')" disabled>OFF</button>
-          </div>
-        </div>
-        `).join("")}
 
-        <div class="error-msg" id="err-${id}"></div>
+// Light index → switch name (Room 503, 8 lights)
+const SWITCH_MAP_503 = {
+  "Sw-1": [6, 7],
+  "Sw-2": [4, 5],
+  "Sw-3": [0, 1, 2],
+  "Sw-4": [3],
+};
+
+// ── AC units (UI-only state for now, no Tuya device mapped) ──
+const AC_UNITS = {
+  mainZone: [
+    { id: 1, name: "AIR 1" },
+    { id: 2, name: "AIR 2" },
+    { id: 3, name: "AIR 3" },
+    { id: 4, name: "AIR 4" },
+  ],
+  newZone: [
+    { id: 101, name: "AIR 5" },
+    { id: 102, name: "AIR 6" },
+  ],
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════════════════════
+
+// switchState: { "Sw-1": true/false/null, "zone-1": true/false/null, ... }
+const switchState = {};
+Object.keys(SWITCH_TO_DEVICE).forEach(k => { switchState[k] = null; });
+
+// acState: { 1: false, 2: false, ..., 101: false, 102: false }
+const acState = {};
+[...AC_UNITS.mainZone, ...AC_UNITS.newZone].forEach(a => { acState[a.id] = false; });
+
+const sessionStart = Date.now();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════════════════════════
+
+function getSwitchForLight(index, map) {
+  for (const [sw, indices] of Object.entries(map)) {
+    if (indices.includes(index)) return sw;
+  }
+  return null;
+}
+
+// Derive switch state → array of light booleans
+function deriveLights(map, count) {
+  return Array.from({ length: count }, (_, i) => {
+    const sw = getSwitchForLight(i, map);
+    return sw ? (switchState[sw] === true) : false;
+  });
+}
+
+function countLightsOn() {
+  return deriveLights(SWITCH_MAP_504, 28).filter(Boolean).length
+       + deriveLights(SWITCH_MAP_503, 8).filter(Boolean).length;
+}
+
+// Device state → logical switch states
+function applyDeviceState(deviceStates) {
+  // deviceStates = { sw1: { switch_1: bool, switch_2: bool }, ... }
+  for (const [swName, mapping] of Object.entries(SWITCH_TO_DEVICE)) {
+    if (!mapping) continue;
+    const dev = deviceStates[mapping.sw];
+    if (!dev) continue;
+    const channelKey = `switch_${mapping.channel}`;
+    switchState[swName] = dev[channelKey] ?? null;
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.style.display = "block";
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.display = "none"; }, 3500);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// API
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function fetchAllState() {
+  const r = await fetch("/switches/state");
+  if (!r.ok) throw new Error(await r.text());
+  return r.json(); // { sw1: { switch_1, switch_2 }, ... }
+}
+
+async function sendCommand(swName, targetState) {
+  const mapping = SWITCH_TO_DEVICE[swName];
+  if (!mapping) return; // not wired yet
+  const action = targetState ? "on" : "off";
+  const r = await fetch(`/switch/${mapping.sw}/${mapping.channel}/${action}`, { method: "POST" });
+  const d = await r.json();
+  if (!r.ok || !d.success) throw new Error(d.error || JSON.stringify(d));
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ACTIONS
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function toggleSwitch(swName) {
+  const mapping = SWITCH_TO_DEVICE[swName];
+  if (!mapping) { showToast(`${swName} — ยังไม่ได้เชื่อมต่ออุปกรณ์`); return; }
+
+  const currentState = switchState[swName] === true;
+  const targetState = !currentState;
+
+  // Optimistic update
+  switchState[swName] = targetState;
+  renderAll();
+
+  try {
+    await sendCommand(swName, targetState);
+    // Confirm real state after 1s
+    setTimeout(async () => {
+      try {
+        const data = await fetchAllState();
+        applyDeviceState(data);
+        renderAll();
+      } catch (_) {}
+    }, 1000);
+  } catch (e) {
+    switchState[swName] = currentState; // revert
+    renderAll();
+    showToast(`ไม่สามารถสั่งงานได้: ${e.message.slice(0, 60)}`);
+  }
+}
+
+async function setAllLights(state) {
+  const keys = Object.keys(SWITCH_TO_DEVICE);
+  // Optimistic
+  keys.forEach(k => { switchState[k] = state; });
+  renderAll();
+  try {
+    await Promise.all(keys.filter(k => SWITCH_TO_DEVICE[k]).map(k => sendCommand(k, state)));
+  } catch (e) {
+    showToast(`บางสวิตช์ไม่ตอบสนอง`);
+    refresh();
+  }
+}
+
+function toggleAc(id) {
+  acState[id] = !acState[id];
+  renderAc();
+}
+
+function setAllAir(zone, state) {
+  AC_UNITS[zone].forEach(a => { acState[a.id] = state; });
+  renderAc();
+}
+
+// Toggle all lights in a column (right sidebar)
+async function toggleColumn(colIdx) {
+  const affected = Object.entries(SWITCH_MAP_504)
+    .filter(([_, indices]) => indices.some(i => i % 7 === colIdx))
+    .map(([sw]) => sw);
+  const anyOn = affected.some(sw => switchState[sw] === true);
+  const target = !anyOn;
+  affected.forEach(sw => { switchState[sw] = target; });
+  renderAll();
+  try {
+    await Promise.all(affected.filter(k => SWITCH_TO_DEVICE[k]).map(k => sendCommand(k, target)));
+  } catch (e) {
+    showToast(`บางสวิตช์ไม่ตอบสนอง`);
+    refresh();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════════════════════════════
+
+function renderSwitchPanel(containerId, switchMap) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  for (const swId of Object.keys(switchMap)) {
+    const isActive = switchState[swId] === true;
+    const isWired  = SWITCH_TO_DEVICE[swId] !== null;
+    const btn = document.createElement("button");
+    btn.className = `sw-btn${isActive ? " active" : ""}${!isWired ? " disabled" : ""}`;
+    btn.title = isWired ? swId : `${swId} (ยังไม่ได้เชื่อมต่อ)`;
+    btn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <circle cx="12" cy="12" r="2"/>
+      </svg>
+      <span>${swId}</span>`;
+    if (isWired) btn.onclick = () => toggleSwitch(swId);
+    container.appendChild(btn);
+  }
+}
+
+function renderLightGrid(containerId, switchMap, count) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  const lights = deriveLights(switchMap, count);
+  lights.forEach((isOn, index) => {
+    const swId = getSwitchForLight(index, switchMap);
+    const cell = document.createElement("div");
+    cell.className = `light-cell${isOn ? " on" : ""}`;
+    cell.innerHTML = `
+      <span class="light-cell-label">${swId || "FREE"}</span>
+      <div class="light-dot"></div>
+      <span class="light-cell-id">${containerId.includes("503") ? "#A-" : "#"}${index}</span>`;
+    container.appendChild(cell);
+  });
+}
+
+function renderAc() {
+  // 503
+  const g503 = document.getElementById("ac-grid-503");
+  g503.innerHTML = "";
+  AC_UNITS.newZone.forEach(air => {
+    const card = document.createElement("div");
+    card.className = `ac-card${acState[air.id] ? " on" : ""}`;
+    card.onclick = () => toggleAc(air.id);
+    card.innerHTML = `
+      <div class="ac-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 10h-12m12 4h-12m12-8h-12"/></svg>
       </div>
-    `);
+      <div class="ac-name">${air.name}</div>
+      <div class="ac-status">${acState[air.id] ? "RUNNING" : "OFF"}</div>`;
+    g503.appendChild(card);
   });
 
-  // ── State helpers ──────────────────────────────────────────────────────────
-  function setChannelState(sw, ch, state) {
-    const dot   = document.getElementById(`dot-${sw}-${ch}`);
-    const label = document.getElementById(`state-${sw}-${ch}`);
-    const btnOn  = document.getElementById(`btn-on-${sw}-${ch}`);
-    const btnOff = document.getElementById(`btn-off-${sw}-${ch}`);
+  // 504
+  const g504 = document.getElementById("ac-grid-504");
+  g504.innerHTML = "";
+  AC_UNITS.mainZone.forEach(air => {
+    const card = document.createElement("div");
+    card.className = `ac-card${acState[air.id] ? " on" : ""}`;
+    card.onclick = () => toggleAc(air.id);
+    card.innerHTML = `
+      <div class="ac-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 10h-12m12 4h-12m12-8h-12"/></svg>
+      </div>
+      <div class="ac-name">${air.name}</div>
+      <div class="ac-status">${acState[air.id] ? "RUNNING" : "OFF"}</div>`;
+    g504.appendChild(card);
+  });
+}
 
-    label.classList.remove("loading");
+function renderRowControls() {
+  const container = document.getElementById("row-controls");
+  container.innerHTML = "";
+  const lights504 = deriveLights(SWITCH_MAP_504, 28);
+  [6, 5, 4, 3, 2, 1, 0].forEach(col => {
+    const colLights = lights504.filter((_, i) => i % 7 === col);
+    const onCount = colLights.filter(Boolean).length;
+    const btn = document.createElement("button");
+    btn.className = "row-btn";
+    btn.onclick = () => toggleColumn(col);
+    btn.innerHTML = `
+      <div class="row-btn-text">
+        <div class="row-btn-name">แถวที่ ${7 - col}</div>
+        <div class="row-btn-count">${onCount}/${colLights.length} เปิด</div>
+      </div>
+      <div class="row-btn-icon">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>
+      </div>`;
+    container.appendChild(btn);
+  });
+}
 
-    const onClass = ch == 2 ? "on2" : "on";
+function renderStats() {
+  document.getElementById("lights-on-count").textContent = countLightsOn();
+  const elapsed = (Date.now() - sessionStart) / 3600000;
+  document.getElementById("session-time").textContent = elapsed.toFixed(1);
+}
 
-    if (state === true) {
-      dot.className   = `dot ${onClass}`;
-      label.className = `channel-state ${onClass}`;
-      label.textContent = "ON";
-    } else if (state === false) {
-      dot.className   = "dot";
-      label.className = "channel-state";
-      label.textContent = "OFF";
-    } else {
-      dot.className   = "dot";
-      label.className = "channel-state";
-      label.textContent = "—";
-    }
+function renderAll() {
+  renderSwitchPanel("switch-panel-503", SWITCH_MAP_503);
+  renderSwitchPanel("switch-panel-504", SWITCH_MAP_504);
+  renderLightGrid("light-grid-503", SWITCH_MAP_503, 8);
+  renderLightGrid("light-grid-504", SWITCH_MAP_504, 28);
+  renderAc();
+  renderRowControls();
+  renderStats();
+}
 
-    btnOn.disabled  = false;
-    btnOff.disabled = false;
+// ══════════════════════════════════════════════════════════════════════════════
+// INIT & POLLING
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function refresh() {
+  try {
+    const data = await fetchAllState();
+    applyDeviceState(data);
+    renderAll();
+  } catch (e) {
+    showToast("ไม่สามารถเชื่อมต่อ backend ได้");
   }
+}
 
-  function setLoading(sw, ch, isLoading) {
-    document.getElementById(`btn-on-${sw}-${ch}`).disabled  = isLoading;
-    document.getElementById(`btn-off-${sw}-${ch}`).disabled = isLoading;
-  }
+async function init() {
+  await refresh();
+  document.getElementById("loading-screen").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+  // Poll every 10 s
+  setInterval(refresh, 10000);
+  // Update session timer every minute
+  setInterval(renderStats, 60000);
+}
 
-  function setError(sw, msg) {
-    document.getElementById(`err-${sw}`).textContent = msg || "";
-  }
-
-  // ── API calls ──────────────────────────────────────────────────────────────
-  async function fetchState(sw) {
-    try {
-      const r = await fetch(`/switch/${sw}/state`);
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || r.statusText);
-      setChannelState(sw, 1, d.switch_1);
-      setChannelState(sw, 2, d.switch_2);
-      setError(sw, "");
-    } catch (e) {
-      setChannelState(sw, 1, null);
-      setChannelState(sw, 2, null);
-      setError(sw, "Failed to fetch state");
-    }
-  }
-
-  async function control(sw, ch, action) {
-    setLoading(sw, ch, true);
-    setError(sw, "");
-    try {
-      const r = await fetch(`/switch/${sw}/${ch}/${action}`, { method: "POST" });
-      const d = await r.json();
-      if (!r.ok || !d.success) throw new Error(d.error || JSON.stringify(d));
-      setChannelState(sw, ch, action === "on");
-      setTimeout(() => fetchState(sw), 1000);
-    } catch (e) {
-      setError(sw, e.message.slice(0, 80));
-      fetchState(sw);
-    } finally {
-      setLoading(sw, ch, false);
-    }
-  }
-
-  async function refreshAll() {
-    const btn = document.getElementById("refresh-btn");
-    btn.disabled = true;
-    await Promise.all(SWITCHES.map(s => fetchState(s.id)));
-    document.getElementById("last-updated").textContent =
-      "Updated " + new Date().toLocaleTimeString();
-    btn.disabled = false;
-  }
-
-  refreshAll();
-  setInterval(refreshAll, 10000);
+init();
 </script>
 </body>
 </html>
