@@ -22,6 +22,9 @@
       --btn-off: #21262d;
       --btn-off-hover: #30363d;
       --danger: #f85149;
+      --ch2-accent: #58a6ff;
+      --ch2-btn-on: #1158a7;
+      --ch2-btn-on-hover: #1a6fcc;
       --radius: 14px;
     }
 
@@ -36,148 +39,105 @@
       padding: 40px 16px;
     }
 
-    header {
-      text-align: center;
-      margin-bottom: 36px;
-    }
+    header { text-align: center; margin-bottom: 36px; }
+    header h1 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.5px; }
+    header p { color: var(--muted); font-size: 0.875rem; margin-top: 6px; }
 
-    header h1 {
-      font-size: 1.8rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
+    .refresh-bar {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 28px;
     }
-
-    header p {
-      color: var(--muted);
-      font-size: 0.875rem;
-      margin-top: 6px;
+    .refresh-bar button {
+      padding: 7px 18px; background: var(--btn-off); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px; font-size: 0.82rem;
+      cursor: pointer; transition: background 0.15s;
     }
+    .refresh-bar button:hover { background: var(--btn-off-hover); }
+    .refresh-label { color: var(--muted); font-size: 0.82rem; }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 20px;
       width: 100%;
-      max-width: 900px;
+      max-width: 1000px;
     }
 
+    /* ── Device card ── */
     .card {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 28px 24px;
+      padding: 24px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
-      transition: border-color 0.3s, background 0.3s;
-    }
-
-    .card.on {
-      background: var(--card-on);
-      border-color: var(--border-on);
+      gap: 16px;
     }
 
     .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-title { font-size: 1.05rem; font-weight: 700; }
+    .device-id {
+      font-size: 0.68rem; color: var(--muted);
+      font-family: "SF Mono", "Fira Code", monospace; word-break: break-all;
+    }
+
+    /* ── Channel row ── */
+    .channel {
+      background: #12151f;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 12px;
     }
 
-    .card-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-
-    .status-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--off-color);
-      transition: background 0.3s, box-shadow 0.3s;
-    }
-
-    .card.on .status-dot {
-      background: var(--on-color);
-      box-shadow: 0 0 8px var(--on-color);
-    }
-
-    .device-id {
-      font-size: 0.72rem;
-      color: var(--muted);
-      font-family: "SF Mono", "Fira Code", monospace;
-      word-break: break-all;
-    }
-
-    .state-label {
-      font-size: 1.5rem;
-      font-weight: 700;
+    .channel-info { flex: 1; }
+    .channel-label { font-size: 0.78rem; font-weight: 700; color: var(--muted); }
+    .channel-state {
+      font-size: 1rem; font-weight: 800;
       color: var(--off-color);
       transition: color 0.3s;
     }
+    .channel-state.on  { color: var(--on-color); }
+    .channel-state.on2 { color: var(--ch2-accent); }
+    .channel-state.loading { color: var(--muted); font-size: 0.85rem; }
 
-    .card.on .state-label {
-      color: var(--on-color);
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--off-color); flex-shrink: 0;
+      transition: background 0.3s, box-shadow 0.3s;
     }
+    .dot.on  { background: var(--on-color);  box-shadow: 0 0 6px var(--on-color); }
+    .dot.on2 { background: var(--ch2-accent); box-shadow: 0 0 6px var(--ch2-accent); }
 
-    .state-label.loading { color: var(--muted); font-size: 1rem; }
-
-    .btn-row {
-      display: flex;
-      gap: 10px;
-    }
+    .btn-pair { display: flex; gap: 6px; }
 
     button {
-      flex: 1;
-      padding: 10px 0;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s, opacity 0.15s;
+      padding: 7px 14px;
+      border: none; border-radius: 7px;
+      font-size: 0.78rem; font-weight: 700;
+      cursor: pointer; transition: background 0.15s, opacity 0.15s;
     }
-
-    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .btn-on  { background: var(--btn-on);  color: #fff; }
     .btn-on:hover:not(:disabled)  { background: var(--btn-on-hover); }
 
+    .btn-on2  { background: var(--ch2-btn-on); color: #fff; }
+    .btn-on2:hover:not(:disabled) { background: var(--ch2-btn-on-hover); }
+
     .btn-off { background: var(--btn-off); color: var(--text); border: 1px solid var(--border); }
     .btn-off:hover:not(:disabled) { background: var(--btn-off-hover); }
 
-    .error-msg {
-      font-size: 0.75rem;
-      color: var(--danger);
-      min-height: 18px;
-    }
+    .error-msg { font-size: 0.72rem; color: var(--danger); min-height: 16px; }
 
     footer {
-      margin-top: 48px;
-      color: var(--muted);
-      font-size: 0.78rem;
-      text-align: center;
+      margin-top: 48px; color: var(--muted); font-size: 0.78rem; text-align: center;
     }
 
-    .refresh-bar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 28px;
-    }
-
-    .refresh-bar button {
-      flex: none;
-      padding: 7px 18px;
-      background: var(--btn-off);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 0.82rem;
-    }
-
-    .refresh-bar button:hover { background: var(--btn-off-hover); }
-
-    .refresh-label { color: var(--muted); font-size: 0.82rem; }
+    /* channel 1 = green accent, channel 2 = blue accent */
   </style>
 </head>
 <body>
@@ -204,42 +164,59 @@
     { id: "sw4", label: "Switch 4", device: "a3e59fd6e1dab69fc1sqpc" },
   ];
 
-  // Build cards
+  // Build cards — each with two channel rows
   const grid = document.getElementById("grid");
   SWITCHES.forEach(({ id, label, device }) => {
     grid.insertAdjacentHTML("beforeend", `
       <div class="card" id="card-${id}">
         <div class="card-header">
           <span class="card-title">${label}</span>
-          <span class="status-dot" id="dot-${id}"></span>
         </div>
         <div class="device-id">${device}</div>
-        <div class="state-label loading" id="state-${id}">…</div>
-        <div class="btn-row">
-          <button class="btn-on"  id="btn-on-${id}"  onclick="control('${id}','on')" disabled>ON</button>
-          <button class="btn-off" id="btn-off-${id}" onclick="control('${id}','off')" disabled>OFF</button>
+
+        ${[1, 2].map(ch => `
+        <div class="channel" id="channel-${id}-${ch}">
+          <span class="dot" id="dot-${id}-${ch}"></span>
+          <div class="channel-info">
+            <div class="channel-label">Channel ${ch}</div>
+            <div class="channel-state loading" id="state-${id}-${ch}">…</div>
+          </div>
+          <div class="btn-pair">
+            <button class="btn-on${ch === 2 ? '2' : ''}" id="btn-on-${id}-${ch}"
+              onclick="control('${id}','${ch}','on')" disabled>ON</button>
+            <button class="btn-off" id="btn-off-${id}-${ch}"
+              onclick="control('${id}','${ch}','off')" disabled>OFF</button>
+          </div>
         </div>
+        `).join("")}
+
         <div class="error-msg" id="err-${id}"></div>
       </div>
     `);
   });
 
-  function setCardState(sw, state) {
-    const card  = document.getElementById(`card-${sw}`);
-    const label = document.getElementById(`state-${sw}`);
-    const btnOn  = document.getElementById(`btn-on-${sw}`);
-    const btnOff = document.getElementById(`btn-off-${sw}`);
+  // ── State helpers ──────────────────────────────────────────────────────────
+  function setChannelState(sw, ch, state) {
+    const dot   = document.getElementById(`dot-${sw}-${ch}`);
+    const label = document.getElementById(`state-${sw}-${ch}`);
+    const btnOn  = document.getElementById(`btn-on-${sw}-${ch}`);
+    const btnOff = document.getElementById(`btn-off-${sw}-${ch}`);
 
     label.classList.remove("loading");
 
+    const onClass = ch == 2 ? "on2" : "on";
+
     if (state === true) {
-      card.classList.add("on");
+      dot.className   = `dot ${onClass}`;
+      label.className = `channel-state ${onClass}`;
       label.textContent = "ON";
     } else if (state === false) {
-      card.classList.remove("on");
+      dot.className   = "dot";
+      label.className = "channel-state";
       label.textContent = "OFF";
     } else {
-      card.classList.remove("on");
+      dot.className   = "dot";
+      label.className = "channel-state";
       label.textContent = "—";
     }
 
@@ -247,43 +224,45 @@
     btnOff.disabled = false;
   }
 
+  function setLoading(sw, ch, isLoading) {
+    document.getElementById(`btn-on-${sw}-${ch}`).disabled  = isLoading;
+    document.getElementById(`btn-off-${sw}-${ch}`).disabled = isLoading;
+  }
+
   function setError(sw, msg) {
     document.getElementById(`err-${sw}`).textContent = msg || "";
   }
 
-  function setLoading(sw, isLoading) {
-    document.getElementById(`btn-on-${sw}`).disabled  = isLoading;
-    document.getElementById(`btn-off-${sw}`).disabled = isLoading;
-  }
-
+  // ── API calls ──────────────────────────────────────────────────────────────
   async function fetchState(sw) {
     try {
       const r = await fetch(`/switch/${sw}/state`);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || r.statusText);
-      setCardState(sw, d.state);
+      setChannelState(sw, 1, d.switch_1);
+      setChannelState(sw, 2, d.switch_2);
       setError(sw, "");
     } catch (e) {
-      setCardState(sw, null);
+      setChannelState(sw, 1, null);
+      setChannelState(sw, 2, null);
       setError(sw, "Failed to fetch state");
     }
   }
 
-  async function control(sw, action) {
-    setLoading(sw, true);
+  async function control(sw, ch, action) {
+    setLoading(sw, ch, true);
     setError(sw, "");
     try {
-      const r = await fetch(`/switch/${sw}/${action}`, { method: "POST" });
+      const r = await fetch(`/switch/${sw}/${ch}/${action}`, { method: "POST" });
       const d = await r.json();
       if (!r.ok || !d.success) throw new Error(d.error || JSON.stringify(d));
-      // Optimistic update then confirm with real state
-      setCardState(sw, action === "on");
+      setChannelState(sw, ch, action === "on");
       setTimeout(() => fetchState(sw), 1000);
     } catch (e) {
       setError(sw, e.message.slice(0, 80));
       fetchState(sw);
     } finally {
-      setLoading(sw, false);
+      setLoading(sw, ch, false);
     }
   }
 
@@ -296,7 +275,6 @@
     btn.disabled = false;
   }
 
-  // Initial load + auto-refresh every 10 s
   refreshAll();
   setInterval(refreshAll, 10000);
 </script>
