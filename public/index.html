@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Light Control</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --card: #1a1d27;
+      --card-on: #1c2a1e;
+      --border: #2a2d3a;
+      --border-on: #2d5c35;
+      --text: #e2e4ec;
+      --muted: #6b7280;
+      --on-color: #34d058;
+      --off-color: #6b7280;
+      --btn-on: #238636;
+      --btn-on-hover: #2ea043;
+      --btn-off: #21262d;
+      --btn-off-hover: #30363d;
+      --danger: #f85149;
+      --radius: 14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 0.875rem;
+      margin-top: 6px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      transition: border-color 0.3s, background 0.3s;
+    }
+
+    .card.on {
+      background: var(--card-on);
+      border-color: var(--border-on);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--off-color);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+
+    .card.on .status-dot {
+      background: var(--on-color);
+      box-shadow: 0 0 8px var(--on-color);
+    }
+
+    .device-id {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-family: "SF Mono", "Fira Code", monospace;
+      word-break: break-all;
+    }
+
+    .state-label {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--off-color);
+      transition: color 0.3s;
+    }
+
+    .card.on .state-label {
+      color: var(--on-color);
+    }
+
+    .state-label.loading { color: var(--muted); font-size: 1rem; }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      flex: 1;
+      padding: 10px 0;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-on  { background: var(--btn-on);  color: #fff; }
+    .btn-on:hover:not(:disabled)  { background: var(--btn-on-hover); }
+
+    .btn-off { background: var(--btn-off); color: var(--text); border: 1px solid var(--border); }
+    .btn-off:hover:not(:disabled) { background: var(--btn-off-hover); }
+
+    .error-msg {
+      font-size: 0.75rem;
+      color: var(--danger);
+      min-height: 18px;
+    }
+
+    footer {
+      margin-top: 48px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-align: center;
+    }
+
+    .refresh-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .refresh-bar button {
+      flex: none;
+      padding: 7px 18px;
+      background: var(--btn-off);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.82rem;
+    }
+
+    .refresh-bar button:hover { background: var(--btn-off-hover); }
+
+    .refresh-label { color: var(--muted); font-size: 0.82rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Light Control</h1>
+  <p>Tuya Smart Switch Dashboard</p>
+</header>
+
+<div class="refresh-bar">
+  <button id="refresh-btn" onclick="refreshAll()">&#8635; Refresh all</button>
+  <span class="refresh-label" id="last-updated">—</span>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<footer>Auto-refreshes every 10 s &nbsp;·&nbsp; Tuya OpenAPI</footer>
+
+<script>
+  const SWITCHES = [
+    { id: "sw1", label: "Switch 1", device: "a3e863268d4c0d259dqtbe" },
+    { id: "sw2", label: "Switch 2", device: "a33a1415dc4aeb626az6ba" },
+    { id: "sw3", label: "Switch 3", device: "a376073de72bb6b235bbln" },
+    { id: "sw4", label: "Switch 4", device: "a3e59fd6e1dab69fc1sqpc" },
+  ];
+
+  // Build cards
+  const grid = document.getElementById("grid");
+  SWITCHES.forEach(({ id, label, device }) => {
+    grid.insertAdjacentHTML("beforeend", `
+      <div class="card" id="card-${id}">
+        <div class="card-header">
+          <span class="card-title">${label}</span>
+          <span class="status-dot" id="dot-${id}"></span>
+        </div>
+        <div class="device-id">${device}</div>
+        <div class="state-label loading" id="state-${id}">…</div>
+        <div class="btn-row">
+          <button class="btn-on"  id="btn-on-${id}"  onclick="control('${id}','on')" disabled>ON</button>
+          <button class="btn-off" id="btn-off-${id}" onclick="control('${id}','off')" disabled>OFF</button>
+        </div>
+        <div class="error-msg" id="err-${id}"></div>
+      </div>
+    `);
+  });
+
+  function setCardState(sw, state) {
+    const card  = document.getElementById(`card-${sw}`);
+    const label = document.getElementById(`state-${sw}`);
+    const btnOn  = document.getElementById(`btn-on-${sw}`);
+    const btnOff = document.getElementById(`btn-off-${sw}`);
+
+    label.classList.remove("loading");
+
+    if (state === true) {
+      card.classList.add("on");
+      label.textContent = "ON";
+    } else if (state === false) {
+      card.classList.remove("on");
+      label.textContent = "OFF";
+    } else {
+      card.classList.remove("on");
+      label.textContent = "—";
+    }
+
+    btnOn.disabled  = false;
+    btnOff.disabled = false;
+  }
+
+  function setError(sw, msg) {
+    document.getElementById(`err-${sw}`).textContent = msg || "";
+  }
+
+  function setLoading(sw, isLoading) {
+    document.getElementById(`btn-on-${sw}`).disabled  = isLoading;
+    document.getElementById(`btn-off-${sw}`).disabled = isLoading;
+  }
+
+  async function fetchState(sw) {
+    try {
+      const r = await fetch(`/switch/${sw}/state`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || r.statusText);
+      setCardState(sw, d.state);
+      setError(sw, "");
+    } catch (e) {
+      setCardState(sw, null);
+      setError(sw, "Failed to fetch state");
+    }
+  }
+
+  async function control(sw, action) {
+    setLoading(sw, true);
+    setError(sw, "");
+    try {
+      const r = await fetch(`/switch/${sw}/${action}`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok || !d.success) throw new Error(d.error || JSON.stringify(d));
+      // Optimistic update then confirm with real state
+      setCardState(sw, action === "on");
+      setTimeout(() => fetchState(sw), 1000);
+    } catch (e) {
+      setError(sw, e.message.slice(0, 80));
+      fetchState(sw);
+    } finally {
+      setLoading(sw, false);
+    }
+  }
+
+  async function refreshAll() {
+    const btn = document.getElementById("refresh-btn");
+    btn.disabled = true;
+    await Promise.all(SWITCHES.map(s => fetchState(s.id)));
+    document.getElementById("last-updated").textContent =
+      "Updated " + new Date().toLocaleTimeString();
+    btn.disabled = false;
+  }
+
+  // Initial load + auto-refresh every 10 s
+  refreshAll();
+  setInterval(refreshAll, 10000);
+</script>
+</body>
+</html>
