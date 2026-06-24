@@ -2,6 +2,7 @@ import cv2
 from ultralytics import YOLO
 import requests
 import time
+import threading
 
 model = YOLO('yolov8n.pt')
 
@@ -9,53 +10,67 @@ RTSP_URL = "rtsp://AiCam504_01:Hw_504_cam01@192.168.88.95:554/stream2"
 API_BASE_URL = "https://hw-light-control.onrender.com"
 
 cap = cv2.VideoCapture(RTSP_URL)
-
-BACKEND_URL = "http://localhost:8000/lighttrigger/update-occupancy"
+cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
 
 last_movement_time = time.time()
-SEND_INTERVAL = 5.0  #30 นาที
+SEND_INTERVAL = 1800.0  #30 นาที
+
+def turn_off_lights():
+    try:
+        for sw_num in range(1, 5):
+            for sw_chanel in range(1, 3):
+                url = f"{API_BASE_URL}/switch/sw{sw_num}/{sw_chanel}/off"
+                response = requests.post(url, timeout=3)
+                if response.status_code == 200:
+                    print(f"Success! Turned off sw{sw_num}/{sw_chanel}")
+                else:
+                    print(f"Error: {response.status_code} - {response.text}")
+    except requests.exceptions.RequestException as e:
+        print(f"Cannot link API Server: {e}")
+
+frame_count = 0
+current_person_count = 0
+annotated_frame = None
 
 while True:
     if not cap.isOpened():
-            time.sleep(5)
-            cap = cv2.VideoCapture(RTSP_URL)
-            continue
+        time.sleep(5)
+        cap = cv2.VideoCapture(RTSP_URL)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
+        continue
     
     ret, frame = cap.read()
     if not ret:
         cap.release()
         time.sleep(2) 
         cap = cv2.VideoCapture(RTSP_URL) 
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
         continue
 
-    results = model.predict(frame, classes=[0], conf=0.4, verbose=False)
-    
-    result = results[0]
-    
-    current_person_count = len(result.boxes)
+    frame_count += 1
 
-    annotated_frame = result.plot()
-    
+    # 2. Frame Skipping: รัน AI แค่ 1 ครั้ง ทุกๆ 3 เฟรม (ลดภาระเครื่อง)
+    if frame_count % 3 == 0:
+        results = model.predict(frame, classes=[0], conf=0.4, verbose=False)
+        result = results[0]
+        current_person_count = len(result.boxes)
+        annotated_frame = result.plot()
+    elif annotated_frame is None:
+        annotated_frame = frame.copy() # เฟรมแรกสุดถ้ายังไม่มีภาพ AI ให้ใช้ภาพต้นฉบับไปก่อน
+
     cv2.putText(annotated_frame, f'People: {current_person_count}', (10, 50), 
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
     current_time = time.time()
 
+    # 3. เช็คเวลาและสั่งปิดไฟ
     if current_person_count == 0 and (current_time - last_movement_time > SEND_INTERVAL):
-            try:
-                for sw_num in range(1, 5):
-                    for sw_chanel in range(1, 3):
-                        response = requests.post(f"{API_BASE_URL}/switch/sw{sw_num}/{sw_chanel}/off", timeout=3)
-                        
-                if response.status_code == 200:
-                    print("Success!")
-                else:
-                    print(f"Error: {response.status_code} - {response.text}")
-                    
-            except requests.exceptions.RequestException as e:
-                print(f"Cannot link API Server: {e}")
-
-            last_movement_time = current_time
+        print("No people detected. Sending turn off command...")
+        
+        # รันฟังก์ชันยิง API ใน Thread ใหม่ กล้องจะได้ไม่ค้าง
+        threading.Thread(target=turn_off_lights, daemon=True).start()
+        
+        last_movement_time = current_time # รีเซ็ตเวลาเพื่อไม่ให้ยิง API ซ้ำรัวๆ
 
     if current_person_count != 0:
         last_movement_time = current_time
