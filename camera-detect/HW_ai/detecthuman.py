@@ -3,11 +3,18 @@ from ultralytics import YOLO
 import requests
 import time
 import threading
+import paho.mqtt.publish as publish
 
 model = YOLO('yolov8n.pt')
 
 RTSP_URL = "rtsp://AiCam504_01:Hw_504_cam01@192.168.88.95:554/stream2"
 API_BASE_URL = "https://hw-light-control.onrender.com"
+
+MQTT_BROKER = "192.168.88.253"
+MQTT_PORT = 1883
+MQTT_USER = "power_node"
+MQTT_PASS = "Hw#504_power"
+MQTT_TOPIC = "room504/ac/servo"
 
 cap = cv2.VideoCapture(RTSP_URL)
 cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
@@ -15,7 +22,7 @@ cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
 last_movement_time = time.time()
 SEND_INTERVAL = 1800.0  #30 นาที
 
-def turn_off_lights():
+def turn_off_all_devices():
     try:
         for sw_num in range(1, 5):
             for sw_chanel in range(1, 3):
@@ -27,6 +34,21 @@ def turn_off_lights():
                     print(f"Error: {response.status_code} - {response.text}")
     except requests.exceptions.RequestException as e:
         print(f"Cannot link API Server: {e}")
+
+    try:
+        print("Sending MQTT command to turn off AC...")
+        auth_data = {'username': MQTT_USER, 'password': MQTT_PASS}
+        
+        publish.single(
+            topic=MQTT_TOPIC, 
+            payload="PUSH", 
+            hostname=MQTT_BROKER, 
+            port=MQTT_PORT, 
+            auth=auth_data
+        )
+        print("Success! Turned off AC (Servo pressed via MQTT)")
+    except Exception as e:
+        print(f"Cannot send MQTT command: {e}")
 
 frame_count = 0
 current_person_count = 0
@@ -68,7 +90,7 @@ while True:
         print("No people detected. Sending turn off command...")
         
         # รันฟังก์ชันยิง API ใน Thread ใหม่ กล้องจะได้ไม่ค้าง
-        threading.Thread(target=turn_off_lights, daemon=True).start()
+        threading.Thread(target=turn_off_all_devices, daemon=True).start()
         
         last_movement_time = current_time # รีเซ็ตเวลาเพื่อไม่ให้ยิง API ซ้ำรัวๆ
 
