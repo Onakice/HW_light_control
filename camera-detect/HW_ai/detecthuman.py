@@ -33,6 +33,11 @@ def turn_off_all_devices():
             if(switch_status.switch_2 == True):
                 url = f"{API_BASE_URL}/switch/sw{sw_num}/{2}/off"
                 response = requests.post(url, timeout=3)
+
+
+
+
+                
                 if response.status_code == 200:
                     print(f"Success! Turned off sw{sw_num}")
                 else:
