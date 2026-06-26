@@ -10,11 +10,11 @@ model = YOLO('yolov8n.pt')
 RTSP_URL = "rtsp://AiCam504_01:Hw_504_cam01@192.168.88.95:554/stream2"
 API_BASE_URL = "https://hw-light-control.onrender.com"
 
-MQTT_BROKER = "192.168.88.253"
-MQTT_PORT = 1883
-MQTT_USER = "power_node"
-MQTT_PASS = "Hw#504_power"
-MQTT_TOPIC = "room504/ac/servo"
+# MQTT_BROKER = "192.168.88.253"
+# MQTT_PORT = 1883
+# MQTT_USER = "power_node"
+# MQTT_PASS = "Hw#504_power"
+# MQTT_TOPIC = "room504/ac/servo"
 
 cap = cv2.VideoCapture(RTSP_URL)
 cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
@@ -37,15 +37,17 @@ def turn_off_all_devices():
 
     try:
         print("Sending MQTT command to turn off AC...")
-        auth_data = {'username': MQTT_USER, 'password': MQTT_PASS}
+
+        ac_api_url = f"{API_BASE_URL}/api/room504/ac/servo/press"
         
-        publish.single(
-            topic=MQTT_TOPIC, 
-            payload="PUSH", 
-            hostname=MQTT_BROKER, 
-            port=MQTT_PORT, 
-            auth=auth_data
-        )
+        data_mqtt = {   
+                        "action": "CLOSE",
+                        "device": "ac_servo",
+                        "room": "504"
+                    }
+        
+        response = requests.post(ac_api_url, json=data_mqtt, timeout=3)     
+
         print("Success! Turned off AC (Servo pressed via MQTT)")
     except Exception as e:
         print(f"Cannot send MQTT command: {e}")

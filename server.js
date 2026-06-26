@@ -6,6 +6,14 @@ const path = require("path");
 
 const mqtt = require('mqtt');
 
+MQTT_BROKER = "192.168.88.253";
+MQTT_PORT = 1883;
+
+const mqttClient = mqtt.connect(process.env.MQTT_URL, {
+  username: process.env.MQTT_USERNAME,
+  password: process.env.MQTT_PASSWORD
+});
+
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -180,6 +188,44 @@ app.get("/switches/state", async (req, res) => {
     res.status(500).json({ error: err.response?.data || err.message });
   }
 });
+
+app.post("/api/room504/ac/servo/press", async(req, res) => {
+  try{
+    const topic = 'room504/ac/servo';
+    const message = req.body.action || 'CLOSE';
+  mqttClient.publish(topic, message, (err) => {
+        if (err) {
+          console.error('Publish error:', err);
+          return res.status(500).json({ success: false, error: 'MQTT Error' });
+        }
+        
+        console.log('${topic} Success');
+        res.json({ success: true, message: 'Servo Success' });
+      });
+
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+app.post("/api/room503/ac/servo/press", async(req, res) => {
+  try{
+    const topic = 'room503/ac/servo';
+    const message = req.body.action || 'CLOSE';
+  mqttClient.publish(topic, message, (err) => {
+        if (err) {
+          console.error('Publish error:', err);
+          return res.status(500).json({ success: false, error: 'MQTT Error' });
+        }
+        
+        console.log('${topic} Success');
+        res.json({ success: true, message: 'Servo Success' });
+      });
+
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
 
 // GET /health
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
