@@ -7,7 +7,7 @@ import paho.mqtt.publish as publish
 
 model = YOLO('yolov8n.pt')
 
-RTSP_URL = "rtsp://AiCam504_01:Hw_504_cam01@192.168.88.95:554/stream2"
+RTSP_URL = "rtsp://AiCam504_01:Hw_504_cam01@192.168.88.95:554/stream1"
 API_BASE_URL = "https://hw-light-control.onrender.com"
 
 # MQTT_BROKER = "192.168.88.253"
@@ -75,7 +75,7 @@ while True:
 
     # 2. Frame Skipping: รัน AI แค่ 1 ครั้ง ทุกๆ 3 เฟรม (ลดภาระเครื่อง)
     if frame_count % 3 == 0:
-        results = model.predict(frame, classes=[0], conf=0.4, verbose=False)
+        results = model.predict(frame, classes=[0], conf=0.15, verbose=False)
         result = results[0]
         current_person_count = len(result.boxes)
         annotated_frame = result.plot()
