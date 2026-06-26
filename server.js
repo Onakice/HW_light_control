@@ -25,6 +25,8 @@ const DEVICES = {
   sw2: process.env.DEVICE_SW2,
   sw3: process.env.DEVICE_SW3,
   sw4: process.env.DEVICE_SW4,
+  sw5: process.env.DEVICE_SW5,
+  sw6: process.env.DEVICE_SW6,
 };
 
 // ─── Token cache ──────────────────────────────────────────────────────────────
@@ -103,8 +105,8 @@ function resolveDevice(sw) {
 }
 
 function resolveChannel(ch) {
-  if (ch !== "1" && ch !== "2") {
-    throw Object.assign(new Error(`Channel must be 1 or 2, got: ${ch}`), { status: 400 });
+  if (!["1", "2", "3"].includes(ch)) {
+    throw Object.assign(new Error(`Channel must be 1, 2, or 3, got: ${ch}`), { status: 400 });
   }
   return `switch_${ch}`;
 }
@@ -118,10 +120,10 @@ function parseChannel(data, channelCode) {
 
 // Extract both switch_1 and switch_2 from a /status response
 function parseAllChannels(data) {
-  if (!data.success) return { switch_1: null, switch_2: null };
+  if (!data.success) return { switch_1: null, switch_2: null, switch_3: null };
   const result = data.result || [];
   const get = (code) => { const r = result.find(s => s.code === code); return r ? r.value : null; };
-  return { switch_1: get("switch_1"), switch_2: get("switch_2") };
+  return { switch_1: get("switch_1"), switch_2: get("switch_2"), switch_3: get("switch_3") };
 }
 
 // ─── Routes ───────────────────────────────────────────────────────────────────

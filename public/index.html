@@ -404,11 +404,11 @@
 // Set to null if a switch is not yet wired to a Tuya device.
 // ══════════════════════════════════════════════════════════════════════════════
 const SWITCH_TO_DEVICE = {
-  // Room 503 — not yet implemented
-  "Sw-1": null,
-  "Sw-2": null,
-  "Sw-3": null,
-  "Sw-4": null,
+  // Room 503
+  "Sw-1": { sw: "sw5", channel: "1" },
+  "Sw-2": { sw: "sw6", channel: "1" },
+  "Sw-3": { sw: "sw6", channel: "2" },
+  "Sw-4": { sw: "sw6", channel: "3" },
   // Room 504
   "Special": { sw: "sw1", channel: "1" },
   "zone-1":  { sw: "sw1", channel: "2" },
@@ -607,10 +607,12 @@ async function toggleColumn(colIdx) {
 // RENDER
 // ══════════════════════════════════════════════════════════════════════════════
 
-function renderSwitchPanel(containerId, switchMap) {
+function renderSwitchPanel(containerId, switchMap, reverse = false) {
   const container = document.getElementById(containerId);
   container.innerHTML = "";
-  for (const swId of Object.keys(switchMap)) {
+  let keys = Object.keys(switchMap);
+  if (reverse) keys = keys.slice().reverse();
+  for (const swId of keys) {
     const isActive = switchState[swId] === true;
     const isWired  = SWITCH_TO_DEVICE[swId] !== null;
     const btn = document.createElement("button");
@@ -706,7 +708,7 @@ function renderStats() {
 }
 
 function renderAll() {
-  renderSwitchPanel("switch-panel-503", SWITCH_MAP_503);
+  renderSwitchPanel("switch-panel-503", SWITCH_MAP_503, true);
   renderSwitchPanel("switch-panel-504", SWITCH_MAP_504);
   renderLightGrid("light-grid-503", SWITCH_MAP_503, 8);
   renderLightGrid("light-grid-504", SWITCH_MAP_504, 28);
