@@ -24,12 +24,17 @@ SEND_INTERVAL = 1800.0  #30 นาที
 
 def turn_off_all_devices():
     try:
+        
         for sw_num in range(1, 5):
-            for sw_chanel in range(1, 3):
-                url = f"{API_BASE_URL}/switch/sw{sw_num}/{sw_chanel}/off"
+            switch_status = requests.get(f"{API_BASE_URL}/switch/sw{sw_num}/state")
+            if(switch_status.switch_1 == True):
+                url = f"{API_BASE_URL}/switch/sw{sw_num}/{1}/off"
+                response = requests.post(url, timeout=3)
+            if(switch_status.switch_2 == True):
+                url = f"{API_BASE_URL}/switch/sw{sw_num}/{2}/off"
                 response = requests.post(url, timeout=3)
                 if response.status_code == 200:
-                    print(f"Success! Turned off sw{sw_num}/{sw_chanel}")
+                    print(f"Success! Turned off sw{sw_num}")
                 else:
                     print(f"Error: {response.status_code} - {response.text}")
     except requests.exceptions.RequestException as e:
