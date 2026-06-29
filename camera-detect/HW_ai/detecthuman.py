@@ -7,7 +7,7 @@ import paho.mqtt.publish as publish
 
 model = YOLO('yolov8n.pt')
 
-RTSP_URL = "rtsp://AiCam504_01:Hw_504_cam01@192.168.88.95:554/stream1"
+RTSP_URL = "rtsp://AiCam504_01:Hw_504_cam01@192.168.88.222:554/stream1"
 API_BASE_URL = "https://hw-light-control.onrender.com"
 
 # MQTT_BROKER = "192.168.88.253"
@@ -33,11 +33,6 @@ def turn_off_all_devices():
             if(switch_status.switch_2 == True):
                 url = f"{API_BASE_URL}/switch/sw{sw_num}/{2}/off"
                 response = requests.post(url, timeout=3)
-
-
-
-
-                
                 if response.status_code == 200:
                     print(f"Success! Turned off sw{sw_num}")
                 else:
