@@ -1,26 +1,92 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SmartControl — ECC 503 & 504</title>
   <style>
+    /* ══════════════════════════════════════════
+       DESIGN TOKENS (light / dark)
+    ══════════════════════════════════════════ */
+    :root {
+      --bg:            #f8f9fb;
+      --surface:       #ffffff;
+      --surface-2:     #f3f4f6;
+      --border:        #f0f0f4;
+      --border-2:      #e5e7eb;
+      --text-1:        #111827;
+      --text-2:        #1f2937;
+      --text-3:        #6b7280;
+      --text-4:        #9ca3af;
+      --brand:         #2563eb;
+      --brand-dark:    #1d4ed8;
+      --active-bg:     #eff6ff;
+      --active-border: #dbeafe;
+      --active-text:   #1d4ed8;
+      --btn2-bg:       #f3f4f6;
+      --btn2-text:     #4b5563;
+      --btn2-hover:    #e5e7eb;
+      --row-btn-bg:    #eff6ff;
+      --row-btn-border:#dbeafe;
+      --row-btn-hover: #dbeafe;
+      --row-btn-icon:  #bfdbfe;
+      --icon-bg:       #f3f4f6;
+      --icon-color:    #9ca3af;
+      --light-on-bg:   #fffbeb;
+      --light-on-bdr:  #fcd34d;
+      --ac-on-bg:      #eff6ff;
+      --ac-on-bdr:     #bfdbfe;
+      --stat-mini-bdr: #f0f0f4;
+    }
+
+    [data-theme="dark"] {
+      --bg:            #0d1117;
+      --surface:       #161b22;
+      --surface-2:     #21262d;
+      --border:        #30363d;
+      --border-2:      #30363d;
+      --text-1:        #e6edf3;
+      --text-2:        #cdd9e5;
+      --text-3:        #8b949e;
+      --text-4:        #6e7681;
+      --brand:         #388bfd;
+      --brand-dark:    #58a6ff;
+      --active-bg:     #0d2244;
+      --active-border: #1f4080;
+      --active-text:   #58a6ff;
+      --btn2-bg:       #21262d;
+      --btn2-text:     #cdd9e5;
+      --btn2-hover:    #30363d;
+      --row-btn-bg:    #0d2244;
+      --row-btn-border:#1f4080;
+      --row-btn-hover: #1f4080;
+      --row-btn-icon:  #1f4080;
+      --icon-bg:       #21262d;
+      --icon-color:    #6e7681;
+      --light-on-bg:   #2a1f00;
+      --light-on-bdr:  #b45309;
+      --ac-on-bg:      #0d2244;
+      --ac-on-bdr:     #1f4080;
+      --stat-mini-bdr: #30363d;
+    }
+
     /* ── Reset ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f8f9fb;
-      color: #111827;
+      background: var(--bg);
+      color: var(--text-1);
       min-height: 100vh;
+      transition: background 0.2s, color 0.2s;
     }
 
     /* ── Loading screen ── */
     #loading-screen {
       position: fixed; inset: 0; z-index: 100;
-      background: #fff;
+      background: var(--surface);
       display: flex; align-items: center; justify-content: center;
-      font-size: 0.9rem; font-weight: 700; color: #6b7280;
+      font-size: 0.9rem; font-weight: 700; color: var(--text-3);
     }
 
     /* ── App shell: sidebar | main | sidebar ── */
@@ -29,38 +95,38 @@
     /* ── Sidebars ── */
     .sidebar {
       width: 280px; flex-shrink: 0;
-      background: #fff;
-      border-right: 1px solid #f0f0f4;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
       padding: 28px 20px;
       position: sticky; top: 0; height: 100vh;
       overflow-y: auto;
       display: flex; flex-direction: column; gap: 28px;
     }
-    .sidebar-right { border-right: none; border-left: 1px solid #f0f0f4; }
+    .sidebar-right { border-right: none; border-left: 1px solid var(--border); }
 
-    .sidebar-brand h1 { font-size: 1.2rem; font-weight: 900; color: #2563eb; letter-spacing: -0.5px; }
-    .sidebar-brand p  { font-size: 0.7rem; color: #9ca3af; font-weight: 600; margin-top: 2px; }
+    .sidebar-brand h1 { font-size: 1.2rem; font-weight: 900; color: var(--brand); letter-spacing: -0.5px; }
+    .sidebar-brand p  { font-size: 0.7rem; color: var(--text-4); font-weight: 600; margin-top: 2px; }
 
     /* ── Stat cards ── */
     .stat-card {
       padding: 14px 16px;
       border-radius: 16px;
-      border: 1px solid #f0f0f4;
-      background: #fff;
+      border: 1px solid var(--border);
+      background: var(--surface);
       transition: all 0.2s;
     }
-    .stat-card.active { background: #eff6ff; border-color: #dbeafe; }
+    .stat-card.active { background: var(--active-bg); border-color: var(--active-border); }
     .stat-icon {
       width: 34px; height: 34px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      background: #f3f4f6; color: #9ca3af;
+      background: var(--icon-bg); color: var(--icon-color);
       margin-bottom: 10px;
     }
     .stat-card.active .stat-icon { background: #3b82f6; color: #fff; }
-    .stat-value { font-size: 1.5rem; font-weight: 800; color: #1f2937; display: inline; }
-    .stat-card.active .stat-value { color: #1d4ed8; }
-    .stat-unit  { font-size: 0.6rem; font-weight: 600; color: #9ca3af; text-transform: uppercase; margin-left: 3px; }
-    .stat-label { font-size: 0.72rem; font-weight: 600; color: #6b7280; margin-top: 2px; }
+    .stat-value { font-size: 1.5rem; font-weight: 800; color: var(--text-2); display: inline; }
+    .stat-card.active .stat-value { color: var(--active-text); }
+    .stat-unit  { font-size: 0.6rem; font-weight: 600; color: var(--text-4); text-transform: uppercase; margin-left: 3px; }
+    .stat-label { font-size: 0.72rem; font-weight: 600; color: var(--text-3); margin-top: 2px; }
 
     /* ── Main content ── */
     main {
@@ -70,25 +136,25 @@
     }
     .main-header {
       padding: 20px 28px;
-      background: #fff;
-      border-bottom: 1px solid #f0f0f4;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
       position: sticky; top: 0; z-index: 10;
       flex-shrink: 0;
     }
-    .main-header h2 { font-size: 0.82rem; font-weight: 800; color: #1f2937; }
-    .legend { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 700; color: #9ca3af; }
+    .main-header h2 { font-size: 0.82rem; font-weight: 800; color: var(--text-2); }
+    .legend { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 700; color: var(--text-4); }
     .legend-dot { width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; }
 
     /* ── Room container ── */
     .rooms-wrap {
       flex: 1;
-      display: flex; align-items: flex-start;
+      display: flex; align-items: center; justify-content: center;
       padding: 28px; gap: 0;
     }
     .rooms-card {
       display: flex; align-items: stretch;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--border-2);
       border-radius: 28px;
       overflow: hidden;
       box-shadow: 0 8px 32px rgba(0,0,0,0.06);
@@ -96,23 +162,23 @@
 
     /* ── Room panels ── */
     .room {
-      background: #fff;
+      background: var(--surface);
       padding: 28px 24px;
       display: flex; flex-direction: column; gap: 0;
     }
-    .room-503 { min-width: 360px; border-right: 1px solid #f0f0f4; }
-    .room-504 { min-width: 700px; }
+    .room-503 { min-width: 360px; border-right: 1px solid var(--border); order: 1; }
+    .room-504 { min-width: 700px; order: 2; }
 
     .section-title {
       display: flex; align-items: center; gap: 10px;
-      font-size: 0.75rem; font-weight: 900;
+      font-size: 0.75rem; font-weight: 900; color: var(--text-1);
       text-transform: uppercase; letter-spacing: 0.05em;
       margin-bottom: 0;
     }
     .section-bar { width: 4px; height: 20px; border-radius: 4px; }
 
     /* ── Switch panel ── */
-    .switch-panel { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #f3f4f6; }
+    .switch-panel { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
     .switch-grid-503 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
     .switch-grid-504 { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-top: 14px; }
 
@@ -120,14 +186,14 @@
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       padding: 10px 4px;
       border-radius: 16px;
-      border: 2px solid #e5e7eb;
-      background: #fff;
+      border: 2px solid var(--border-2);
+      background: var(--surface);
       cursor: pointer;
       transition: all 0.2s;
       gap: 4px;
-      color: #9ca3af;
+      color: var(--text-4);
     }
-    .sw-btn:hover { border-color: #d1d5db; }
+    .sw-btn:hover { border-color: var(--text-4); }
     .sw-btn.active { background: #fbbf24; border-color: #f59e0b; color: #fff; box-shadow: 0 4px 12px rgba(251,191,36,0.3); }
     .sw-btn.disabled { opacity: 0.35; cursor: not-allowed; }
     .sw-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
@@ -142,69 +208,69 @@
     .light-cell {
       width: 80px; height: 100px;
       border-radius: 16px;
-      border: 2px solid #e5e7eb;
-      background: #fff;
+      border: 2px solid var(--border-2);
+      background: var(--surface);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       position: relative;
       transition: all 0.4s;
       cursor: default;
     }
-    .light-cell.on { background: #fffbeb; border-color: #fcd34d; box-shadow: 0 4px 16px rgba(251,191,36,0.18); }
+    .light-cell.on { background: var(--light-on-bg); border-color: var(--light-on-bdr); box-shadow: 0 4px 16px rgba(251,191,36,0.18); }
     .light-cell-label {
       position: absolute; top: 7px;
       font-size: 0.55rem; font-weight: 800;
-      color: #374151;
+      color: var(--text-2);
     }
     .light-cell.on .light-cell-label { color: #d97706; }
     .light-dot {
       width: 12px; height: 12px; border-radius: 50%;
-      background: #e5e7eb;
+      background: var(--border-2);
       transition: all 0.3s;
     }
     .light-cell.on .light-dot { background: #f59e0b; transform: scale(1.25); box-shadow: 0 0 8px rgba(245,158,11,0.5); }
     .light-cell-id {
       margin-top: 6px;
-      font-size: 0.55rem; font-family: monospace; color: #9ca3af;
+      font-size: 0.55rem; font-family: monospace; color: var(--text-4);
     }
     .badge {
       display: inline-flex; align-items: center;
       padding: 4px 10px; border-radius: 8px;
       font-size: 0.62rem; font-weight: 800; text-transform: uppercase;
     }
-    .badge-switch { background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; }
-    .badge-door   { background: #111827; color: #fff; }
+    .badge-switch { background: var(--icon-bg); color: var(--text-4); border: 1px solid var(--border-2); }
+    .badge-door   { background: var(--text-1); color: var(--surface); }
 
     /* ── AC section ── */
-    .ac-section { margin-top: 28px; padding-top: 24px; border-top: 1px solid #f3f4f6; }
+    .ac-section { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border); }
     .ac-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
     .ac-grid-503 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
     .ac-grid-504 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 
     .ac-card {
-      border-radius: 20px; border: 2px solid #f3f4f6;
-      background: #fff;
+      border-radius: 20px; border: 2px solid var(--border);
+      background: var(--surface);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       padding: 20px 8px;
       cursor: pointer;
       transition: all 0.25s;
     }
-    .ac-card:hover { border-color: #e5e7eb; }
-    .ac-card.on { background: #eff6ff; border-color: #bfdbfe; box-shadow: 0 4px 12px rgba(59,130,246,0.1); }
+    .ac-card:hover { border-color: var(--border-2); }
+    .ac-card.on { background: var(--ac-on-bg); border-color: var(--ac-on-bdr); box-shadow: 0 4px 12px rgba(59,130,246,0.1); }
     .ac-icon {
       width: 40px; height: 40px; border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
-      background: #f3f4f6; color: #d1d5db;
+      background: var(--icon-bg); color: var(--border-2);
       margin-bottom: 8px;
       transition: all 0.25s;
     }
     .ac-card.on .ac-icon { background: #3b82f6; color: #fff; }
-    .ac-name  { font-size: 0.62rem; font-weight: 900; text-transform: uppercase; color: #9ca3af; }
-    .ac-card.on .ac-name { color: #1d4ed8; }
-    .ac-status { font-size: 0.5rem; font-weight: 700; color: #d1d5db; margin-top: 2px; }
+    .ac-name  { font-size: 0.62rem; font-weight: 900; text-transform: uppercase; color: var(--text-4); }
+    .ac-card.on .ac-name { color: var(--active-text); }
+    .ac-status { font-size: 0.5rem; font-weight: 700; color: var(--border-2); margin-top: 2px; }
     .ac-card.on .ac-status { color: #60a5fa; }
 
     /* ── Right sidebar buttons ── */
-    .ctrl-label { font-size: 0.62rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+    .ctrl-label { font-size: 0.62rem; font-weight: 700; color: var(--text-4); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
     .btn-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .btn {
       padding: 10px; border-radius: 12px;
@@ -212,25 +278,25 @@
       border: none; cursor: pointer; transition: all 0.15s;
     }
     .btn:active { transform: scale(0.97); }
-    .btn-primary { background: #2563eb; color: #fff; }
-    .btn-primary:hover { background: #1d4ed8; }
-    .btn-secondary { background: #f3f4f6; color: #4b5563; }
-    .btn-secondary:hover { background: #e5e7eb; }
+    .btn-primary { background: var(--brand); color: #fff; }
+    .btn-primary:hover { background: var(--brand-dark); }
+    .btn-secondary { background: var(--btn2-bg); color: var(--btn2-text); }
+    .btn-secondary:hover { background: var(--btn2-hover); }
 
     .row-btn {
       width: 100%; display: flex; align-items: center; gap: 10px;
       padding: 10px 12px;
-      background: #eff6ff; border: 1px solid #dbeafe;
+      background: var(--row-btn-bg); border: 1px solid var(--row-btn-border);
       border-radius: 12px; cursor: pointer; transition: all 0.15s;
     }
-    .row-btn:hover { background: #dbeafe; border-color: #93c5fd; }
+    .row-btn:hover { background: var(--row-btn-hover); }
     .row-btn-text { flex: 1; text-align: left; }
-    .row-btn-name  { font-size: 0.72rem; font-weight: 800; color: #1e40af; }
-    .row-btn-count { font-size: 0.62rem; color: #3b82f6; font-weight: 600; }
+    .row-btn-name  { font-size: 0.72rem; font-weight: 800; color: var(--active-text); }
+    .row-btn-count { font-size: 0.62rem; color: var(--brand); font-weight: 600; }
     .row-btn-icon {
       width: 24px; height: 24px; border-radius: 8px;
-      background: #bfdbfe; display: flex; align-items: center; justify-content: center;
-      color: #1d4ed8;
+      background: var(--row-btn-icon); display: flex; align-items: center; justify-content: center;
+      color: var(--active-text);
     }
     .row-space { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
 
@@ -241,32 +307,32 @@
       gap: 8px;
     }
     .mini-stat {
-      background: #f8f9fb;
-      border: 1px solid #f0f0f4;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
       border-radius: 12px;
       padding: 10px 12px;
       display: flex; flex-direction: column; gap: 2px;
       transition: all 0.2s;
     }
-    .mini-stat.active { background: #eff6ff; border-color: #dbeafe; }
+    .mini-stat.active { background: var(--active-bg); border-color: var(--active-border); }
     .mini-stat-label {
       font-size: 0.58rem; font-weight: 700;
-      color: #9ca3af; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--text-4); text-transform: uppercase; letter-spacing: 0.04em;
     }
-    .mini-stat.active .mini-stat-label { color: #3b82f6; }
+    .mini-stat.active .mini-stat-label { color: var(--brand); }
     .mini-stat-val {
-      font-size: 1.05rem; font-weight: 800; color: #1f2937; line-height: 1.2;
+      font-size: 1.05rem; font-weight: 800; color: var(--text-2); line-height: 1.2;
     }
-    .mini-stat.active .mini-stat-val { color: #1d4ed8; }
-    .mini-stat-unit { font-size: 0.58rem; font-weight: 600; color: #9ca3af; margin-left: 2px; }
-    .mini-stat-sub { font-size: 0.55rem; color: #9ca3af; margin-top: 2px; }
+    .mini-stat.active .mini-stat-val { color: var(--active-text); }
+    .mini-stat-unit { font-size: 0.58rem; font-weight: 600; color: var(--text-4); margin-left: 2px; }
+    .mini-stat-sub { font-size: 0.55rem; color: var(--text-4); margin-top: 2px; }
 
     /* ── Combined stat group ── */
     .stat-group {
-      border: 1px solid #f0f0f4;
+      border: 1px solid var(--border);
       border-radius: 16px;
       overflow: hidden;
-      background: #fff;
+      background: var(--surface);
     }
     .stat-group-grid {
       display: grid;
@@ -274,23 +340,23 @@
     }
     .stat-mini {
       padding: 11px 13px;
-      border-right: 1px solid #f0f0f4;
-      border-bottom: 1px solid #f0f0f4;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
       transition: background 0.2s;
     }
     .stat-mini:nth-child(2n)   { border-right: none; }
     .stat-mini:nth-child(n+3)  { border-bottom: none; }
-    .stat-mini.active          { background: #eff6ff; }
-    .stat-mini-label { font-size: 0.6rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
-    .stat-mini-value { font-size: 1.15rem; font-weight: 800; color: #1f2937; }
-    .stat-mini.active .stat-mini-value { color: #1d4ed8; }
-    .stat-mini-unit  { font-size: 0.58rem; font-weight: 600; color: #9ca3af; margin-left: 2px; }
-    .stat-mini-sub   { font-size: 0.58rem; color: #9ca3af; margin-top: 2px; }
+    .stat-mini.active          { background: var(--active-bg); }
+    .stat-mini-label { font-size: 0.6rem; font-weight: 700; color: var(--text-4); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+    .stat-mini-value { font-size: 1.15rem; font-weight: 800; color: var(--text-2); }
+    .stat-mini.active .stat-mini-value { color: var(--active-text); }
+    .stat-mini-unit  { font-size: 0.58rem; font-weight: 600; color: var(--text-4); margin-left: 2px; }
+    .stat-mini-sub   { font-size: 0.58rem; color: var(--text-4); margin-top: 2px; }
 
     /* ── Status dot ── */
     .status-dot {
       width: 8px; height: 8px; border-radius: 50%;
-      background: #d1d5db;
+      background: var(--border-2);
       display: inline-block;
       flex-shrink: 0;
       transition: background 0.4s;
@@ -306,6 +372,30 @@
       font-size: 0.8rem; font-weight: 700;
       display: none;
       box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+
+    /* ── Room tabs (mobile only) ── */
+    .room-tabs {
+      display: none;
+      background: var(--surface-2);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .room-tab {
+      padding: 5px 14px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-3);
+      font-size: 0.72rem; font-weight: 800;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .room-tab.active {
+      background: var(--surface);
+      color: var(--brand);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     }
 
     /* ══════════════════════════════════════════
@@ -327,8 +417,8 @@
     #mobile-nav {
       display: none;
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
-      background: #fff;
-      border-top: 1px solid #f0f0f4;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
       padding: 0 8px env(safe-area-inset-bottom, 8px);
       height: 58px;
       align-items: center;
@@ -338,10 +428,10 @@
       display: flex; flex-direction: column; align-items: center; gap: 3px;
       flex: 1; padding: 8px 4px;
       background: none; border: none; cursor: pointer;
-      color: #9ca3af; font-size: 0.55rem; font-weight: 700;
+      color: var(--text-4); font-size: 0.55rem; font-weight: 700;
       transition: color 0.15s;
     }
-    .mnav-btn.active { color: #2563eb; }
+    .mnav-btn.active { color: var(--brand); }
     .mnav-btn svg { width: 20px; height: 20px; }
 
     /* ─ tablet: 769–1199 ─ */
@@ -361,7 +451,7 @@
         display: flex;
         position: fixed; top: 16px; right: 16px; z-index: 51;
         width: 40px; height: 40px; border-radius: 12px;
-        background: #2563eb; color: #fff;
+        background: var(--brand); color: #fff;
         border: none; cursor: pointer;
         align-items: center; justify-content: center;
         box-shadow: 0 4px 12px rgba(37,99,235,0.35);
@@ -375,7 +465,7 @@
         min-width: unset;
         width: 100%;
         border-right: none;
-        border-bottom: 1px solid #f0f0f4;
+        border-bottom: 1px solid var(--border);
       }
       .room-504 { border-bottom: none; }
 
@@ -416,6 +506,17 @@
         border-right: none; border-bottom: 1px solid #f0f0f4;
       }
       .room-504 { border-bottom: none; }
+
+      /* Show room tab switcher */
+      .room-tabs { display: flex; }
+
+      /* Per-room view: hide both rooms by default, show active */
+      .rooms-card { flex-direction: column; }
+      .room-503, .room-504 { display: none; }
+      .room-503.room-active, .room-504.room-active { display: flex; border-bottom: none; }
+
+      /* Hide AC section on mobile — available via hamburger/right drawer */
+      .ac-section { display: none; }
 
       /* Switch grids: 4 columns each on mobile */
       .switch-grid-503 { grid-template-columns: repeat(4, 1fr); gap: 6px; }
@@ -480,9 +581,14 @@
   <!-- ── Left Sidebar ── -->
   <aside class="sidebar">
     <div class="sidebar-brand">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <h1>SmartControl</h1>
-        <span class="status-dot" id="status-dot"></span>
+      <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <h1>SmartControl</h1>
+          <span class="status-dot" id="status-dot"></span>
+        </div>
+        <button id="dark-toggle" onclick="toggleDark()" aria-label="สลับธีม" style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-3);flex-shrink:0;transition:all 0.2s;">
+          <svg id="dark-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
       </div>
       <p>ระบบบริหารจัดการพลังงาน</p>
     </div>
@@ -540,49 +646,18 @@
   <main>
     <div class="main-header">
       <h2>ผังหลอดไฟ และแอร์ ภายในห้อง ECC 503 และ 504</h2>
-      <div class="legend"><span class="legend-dot"></span> สถานะเปิด</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <!-- Room tab switcher — visible on mobile only -->
+        <div class="room-tabs" id="room-tabs">
+          <button class="room-tab active" id="tab-504" onclick="switchRoom('504')">504</button>
+          <button class="room-tab" id="tab-503" onclick="switchRoom('503')">503</button>
+        </div>
+        <div class="legend"><span class="legend-dot"></span> สถานะเปิด</div>
+      </div>
     </div>
 
     <div class="rooms-wrap">
       <div class="rooms-card">
-
-        <!-- ══ Room 503 ══ -->
-        <div class="room room-503">
-          <!-- Switch panel 503 -->
-          <div class="switch-panel">
-            <div class="section-title">
-              <div class="section-bar" style="background:#ef4444"></div>
-              แผงสวิตช์ควบคุม 503
-            </div>
-            <div class="switch-grid-503" id="switch-panel-503"></div>
-          </div>
-
-          <!-- Lights 503 -->
-          <div class="light-section">
-            <div class="light-section-header">
-              <div class="section-title">
-                <div class="section-bar" style="background:#3b82f6"></div>
-                ผังหลอดไฟ ห้อง 503
-              </div>
-              <div style="display:flex;gap:6px;">
-                <span class="badge badge-switch">Switch</span>
-                <span class="badge badge-door">Door</span>
-              </div>
-            </div>
-            <div class="light-grid-503" id="light-grid-503"></div>
-          </div>
-
-          <!-- AC 503 -->
-          <div class="ac-section">
-            <div class="ac-section-header">
-              <div class="section-title">
-                <div class="section-bar" style="background:#3b82f6"></div>
-                เครื่องปรับอากาศ
-              </div>
-            </div>
-            <div class="ac-grid-503" id="ac-grid-503"></div>
-          </div>
-        </div>
 
         <!-- ══ Room 504 ══ -->
         <div class="room room-504">
@@ -626,6 +701,44 @@
           </div>
         </div>
 
+        <!-- ══ Room 503 ══ -->
+        <div class="room room-503">
+          <!-- Switch panel 503 -->
+          <div class="switch-panel">
+            <div class="section-title">
+              <div class="section-bar" style="background:#ef4444"></div>
+              แผงสวิตช์ควบคุม 503
+            </div>
+            <div class="switch-grid-503" id="switch-panel-503"></div>
+          </div>
+
+          <!-- Lights 503 -->
+          <div class="light-section">
+            <div class="light-section-header">
+              <div class="section-title">
+                <div class="section-bar" style="background:#3b82f6"></div>
+                ผังหลอดไฟ ห้อง 503
+              </div>
+              <div style="display:flex;gap:6px;">
+                <span class="badge badge-switch">Switch</span>
+                <span class="badge badge-door">Door</span>
+              </div>
+            </div>
+            <div class="light-grid-503" id="light-grid-503"></div>
+          </div>
+
+          <!-- AC 503 -->
+          <div class="ac-section">
+            <div class="ac-section-header">
+              <div class="section-title">
+                <div class="section-bar" style="background:#3b82f6"></div>
+                เครื่องปรับอากาศ
+              </div>
+            </div>
+            <div class="ac-grid-503" id="ac-grid-503"></div>
+          </div>
+        </div>
+
       </div><!-- /rooms-card -->
     </div><!-- /rooms-wrap -->
   </main>
@@ -645,11 +758,11 @@
         รีเฟรชเดี๋ยวนี้
       </button>
     </div>
-    <div style="border-top:1px solid #f0f0f4;padding-top:20px;">
+    <div style="border-top:1px solid var(--border);padding-top:20px;">
       <div class="ctrl-label">ควบคุมโซน (504)</div>
       <div class="row-space" id="row-controls"></div>
     </div>
-    <div style="border-top:1px solid #f0f0f4;padding-top:20px;">
+    <div style="border-top:1px solid var(--border);padding-top:20px;">
       <div class="ctrl-label">ควบคุมโซน (503)</div>
       <div class="row-space" id="zone-controls-503"></div>
     </div>
@@ -1136,9 +1249,54 @@ async function init() {
   setInterval(refresh, 10000);
   setInterval(refreshLogs, 5 * 60 * 1000);
   setInterval(renderStats, 60000);
+  initRoomView();
 }
 
 init();
+
+// ── Dark mode ────────────────────────────────────────────────────────────────
+const sunIcon  = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
+const moonIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+
+function applyTheme(dark) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : '');
+  const btn = document.getElementById('dark-icon');
+  if (btn) btn.innerHTML = dark ? sunIcon : moonIcon;
+  localStorage.setItem('theme', dark ? 'dark' : 'light');
+}
+
+function toggleDark() {
+  applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark');
+}
+
+// Apply saved theme immediately
+applyTheme(localStorage.getItem('theme') === 'dark');
+
+// ── Mobile room switching ─────────────────────────────────────────────────────
+let activeRoom = '504';
+
+function switchRoom(room) {
+  activeRoom = room;
+  document.getElementById('tab-503').classList.toggle('active', room === '503');
+  document.getElementById('tab-504').classList.toggle('active', room === '504');
+  document.querySelector('.room-503').classList.toggle('room-active', room === '503');
+  document.querySelector('.room-504').classList.toggle('room-active', room === '504');
+}
+
+// Initialize room view on mobile
+function initRoomView() {
+  if (window.innerWidth <= 768) {
+    switchRoom('504');
+  }
+}
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) {
+    document.querySelector('.room-503').classList.remove('room-active');
+    document.querySelector('.room-504').classList.remove('room-active');
+  } else {
+    switchRoom(activeRoom);
+  }
+});
 
 // ── Drawer / mobile nav ──────────────────────────────────────────────────────
 const leftSidebar  = document.querySelector('.sidebar:not(.sidebar-right)');
