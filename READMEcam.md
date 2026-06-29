@@ -204,3 +204,82 @@ See [step.md](step.md) for the full Railway deployment guide (free tier, always-
 | `axios` | HTTP client for Tuya API calls |
 | `dotenv` | Loads `.env` into `process.env` |
 | `crypto` | HMAC-SHA256 signing (Node.js built-in) |
+
+---
+
+## Camera & AI Detection (`camera-detect/`)
+
+ระบบกล้องทำงานแยกจาก Express server — เป็น Python script ที่รันอิสระบนเครื่องที่ติดตั้งกล้อง แล้วสั่งควบคุมไฟผ่าน API ของ server นี้
+
+### ภาพรวม
+
+```
+IP Camera (RTSP)
+      │
+      ▼
+detecthuman.py  ─── YOLOv8n ──► นับคนในเฟรม
+      │
+      ▼  (ถ้าไม่มีคนนานเกิน 30 นาที)
+POST /switch/sw{n}/{ch}/off  ──► Express Server ──► Tuya API ──► ปิดไฟ
+```
+
+### ไฟล์
+
+```
+camera-detect/
+└── HW_ai/
+    ├── detecthuman.py   # Main script
+    └── yolov8n.pt       # YOLOv8 nano model weights
+```
+
+### การทำงาน
+
+1. **ต่อกล้อง RTSP** — ดึง stream จากกล้อง IP ในห้อง 504 (`192.168.88.95`)
+2. **Frame skipping** — รัน AI ทุก 3 เฟรม เพื่อลดภาระ CPU/GPU
+3. **YOLOv8n inference** — ตรวจจับเฉพาะ class 0 (person) ที่ confidence ≥ 0.4
+4. **นับคนแบบ real-time** — แสดงจำนวนคนบนหน้าต่าง `cv2.imshow`
+5. **Auto turn-off** — ถ้าไม่พบคนนานเกิน **30 นาที** ส่ง API ปิดไฟทุก channel (sw1–sw4, ch1–2) ใน background thread
+
+### Logic สรุป
+
+```
+มีคน → รีเซ็ตนาฬิกา (last_movement_time = now)
+ไม่มีคน + ผ่านมา 30 นาที → ยิง POST /switch/sw{1-4}/{1-2}/off ทุกตัว
+                           → รีเซ็ตนาฬิกา (ไม่ให้ยิงซ้ำ)
+```
+
+### Prerequisites
+
+```bash
+pip install ultralytics opencv-python requests
+```
+
+- Python 3.8+
+- ไฟล์ `yolov8n.pt` ต้องอยู่ในโฟลเดอร์เดียวกับ script
+- กล้องต้องอยู่ใน network เดียวกับเครื่องที่รัน script
+
+### Configuration
+
+แก้ค่าตัวแปรบนสุดของ `detecthuman.py`:
+
+| ตัวแปร | ค่าปัจจุบัน | คำอธิบาย |
+|---|---|---|
+| `RTSP_URL` | `rtsp://AiCam504_01:Hw_504_cam01@192.168.88.95:554/stream2` | URL กล้อง IP |
+| `API_BASE_URL` | `https://hw-light-control.onrender.com` | URL ของ Express server |
+| `SEND_INTERVAL` | `1800.0` (วินาที) | เวลารอก่อนปิดไฟ (30 นาที) |
+
+### วิธีรัน
+
+```bash
+cd camera-detect/HW_ai
+python detecthuman.py
+```
+
+กด `q` บนหน้าต่าง OpenCV เพื่อหยุด
+
+### การ reconnect อัตโนมัติ
+
+ถ้ากล้องหลุด (`cap.read()` คืนค่า `False`) script จะ:
+1. ปล่อย capture object
+2. รอ 2 วินาที
+3. เชื่อมต่อใหม่อัตโนมัติ — ไม่ต้องรีสตาร์ตด้วยมือ
