@@ -37,10 +37,17 @@ function hmac(secret, str) {
   return crypto.createHmac("sha256", secret).update(str).digest("hex").toUpperCase();
 }
 
-// stringToSign = HTTPMethod\n SHA256(body)\n\n path
+// stringToSign = HTTPMethod\n SHA256(body)\n\n path(?sorted_query)
 function buildStringToSign(method, apiPath, body = "") {
   const bodyHash = crypto.createHash("sha256").update(body).digest("hex");
-  return `${method}\n${bodyHash}\n\n${apiPath}`;
+  // Sort query parameters alphabetically (required by Tuya v2.0 signing)
+  const [basePath, qs] = apiPath.split("?");
+  let sortedPath = basePath;
+  if (qs) {
+    const sorted = qs.split("&").sort().join("&");
+    sortedPath = `${basePath}?${sorted}`;
+  }
+  return `${method}\n${bodyHash}\n\n${sortedPath}`;
 }
 
 // ─── Token management ─────────────────────────────────────────────────────────
@@ -174,6 +181,24 @@ app.get("/switches/state", async (req, res) => {
     for (const [sw, deviceId] of Object.entries(DEVICES)) {
       const data = await tuyaRequest("GET", `/v1.0/iot-03/devices/${deviceId}/status`);
       results[sw] = parseAllChannels(data);
+    }
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: err.response?.data || err.message });
+  }
+});
+
+// GET /switches/logs — today's switch events for all devices (used for duration tracking)
+app.get("/switches/logs", async (req, res) => {
+  try {
+    const startTime = new Date().setHours(0, 0, 0, 0);
+    const endTime   = Date.now();
+    const results   = {};
+    for (const [sw, deviceId] of Object.entries(DEVICES)) {
+      if (!deviceId) continue;
+      const apiPath = `/v2.0/cloud/thing/${deviceId}/report-logs?codes=switch_1,switch_2,switch_3&end_time=${endTime}&size=50&start_time=${startTime}`;
+      const data = await tuyaRequest("GET", apiPath);
+      results[sw] = data.result?.logs || [];
     }
     res.json(results);
   } catch (err) {

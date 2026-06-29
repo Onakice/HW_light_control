@@ -289,13 +289,29 @@
         <div><span class="stat-value" id="lights-on-count">0</span><span class="stat-unit">ดวง</span></div>
         <div class="stat-label">เปิดไฟทิ้งไว้</div>
       </div>
-      <!-- Session time -->
-      <div class="stat-card">
+      <!-- Duration 503 -->
+      <div class="stat-card" id="duration-503-card">
         <div class="stat-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
         </div>
-        <div><span class="stat-value" id="session-time">0.0</span><span class="stat-unit">ชม.</span></div>
-        <div class="stat-label">ระยะเวลาใช้งานวันนี้</div>
+        <div><span class="stat-value" id="duration-503">—</span><span class="stat-unit" id="duration-503-unit"></span></div>
+        <div class="stat-label">ไฟห้อง 503 เปิดมา</div>
+      </div>
+      <!-- Duration 504 -->
+      <div class="stat-card" id="duration-504-card">
+        <div class="stat-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div><span class="stat-value" id="duration-504">—</span><span class="stat-unit" id="duration-504-unit"></span></div>
+        <div class="stat-label">ไฟห้อง 504 เปิดมา</div>
+      </div>
+      <!-- Longest on -->
+      <div class="stat-card" id="longest-on-card">
+        <div class="stat-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div><span class="stat-value" style="font-size:0.85rem;" id="longest-on-name">—</span></div>
+        <div class="stat-label">เปิดนานสุดวันนี้</div>
       </div>
       <!-- Last sync -->
       <div class="stat-card">
@@ -312,6 +328,7 @@
         </div>
         <div><span class="stat-value" id="ac-on-count">0</span><span class="stat-unit">/ 6 ตัว</span></div>
         <div class="stat-label">แอร์เปิดอยู่</div>
+        <div style="font-size:0.62rem;color:#6b7280;margin-top:4px;" id="ac-room-detail"></div>
       </div>
     </div>
   </aside>
@@ -420,7 +437,7 @@
       </div>
     </div>
     <div>
-      <button class="btn btn-secondary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="refresh()">
+      <button class="btn btn-secondary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="refresh(); refreshLogs()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         รีเฟรชเดี๋ยวนี้
       </button>
@@ -509,7 +526,8 @@ const acState = {};
 
 let lastSyncTime = null;
 let isOnline = false;
-let lightsOnSince = null;
+const switchOnSince = {}; // swName → timestamp (ms) or null
+const acOnSince = {};     // ac.id → timestamp (ms) or null
 
 // ══════════════════════════════════════════════════════════════════════════════
 // HELPERS
@@ -552,6 +570,58 @@ function showToast(msg) {
   t.textContent = msg; t.style.display = "block";
   clearTimeout(t._timer);
   t._timer = setTimeout(() => { t.style.display = "none"; }, 3500);
+}
+
+// Process Tuya device logs → populate switchOnSince
+function processLogs(logsData) {
+  const midnight = new Date().setHours(0, 0, 0, 0);
+  for (const [swName, mapping] of Object.entries(SWITCH_TO_DEVICE)) {
+    if (!mapping) { switchOnSince[swName] = null; continue; }
+    const logs = logsData[mapping.sw] || [];
+    const code = `switch_${mapping.channel}`;
+    const relevant = logs
+      .filter(l => l.code === code)
+      .sort((a, b) => b.event_time - a.event_time); // newest first
+    if (relevant.length === 0) {
+      // No event today — if device is currently on, treat as on since midnight
+      switchOnSince[swName] = switchState[swName] === true ? midnight : null;
+    } else {
+      switchOnSince[swName] = relevant[0].value === "true" ? relevant[0].event_time : null;
+    }
+  }
+}
+
+// Earliest on-time among a list of switch names → duration in hours
+function getRoomDuration(swNames) {
+  const times = swNames.map(sw => switchOnSince[sw]).filter(t => t != null);
+  if (!times.length) return null;
+  return (Date.now() - Math.min(...times)) / 3600000;
+}
+
+// Switch name that has been on the longest today
+function getLongestOnSwitch() {
+  let earliest = Infinity, name = null;
+  for (const [sw, t] of Object.entries(switchOnSince)) {
+    if (t != null && t < earliest) { earliest = t; name = sw; }
+  }
+  return name;
+}
+
+// Duration (hrs) for the earliest-running AC in a zone
+function getRoomAcDuration(zone) {
+  const times = AC_UNITS[zone]
+    .filter(a => acState[a.id])
+    .map(a => acOnSince[a.id])
+    .filter(t => t);
+  if (!times.length) return null;
+  return (Date.now() - Math.min(...times)) / 3600000;
+}
+
+// Format hours → "Xชม. Yน." if < 1hr, else "X.Xชม."
+function fmtHours(h) {
+  if (h === null) return { val: "—", unit: "" };
+  if (h < 1) return { val: Math.round(h * 60), unit: "น." };
+  return { val: h.toFixed(1), unit: "ชม." };
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -612,7 +682,9 @@ async function setAllLights(state) {
 
 function toggleAc(id) {
   acState[id] = !acState[id];
+  acOnSince[id] = acState[id] ? Date.now() : null;
   renderAc();
+  renderStats();
 }
 
 function setAllAir(zone, state) {
@@ -762,22 +834,40 @@ function render503Controls() {
 }
 
 function renderStats() {
-  const onCount = countLightsOn();
-  document.getElementById("lights-on-count").textContent = onCount;
+  // Lights on count
+  document.getElementById("lights-on-count").textContent = countLightsOn();
 
-  // track lights-on duration
-  if (onCount > 0 && !lightsOnSince) lightsOnSince = Date.now();
-  if (onCount === 0) lightsOnSince = null;
-  const elapsed = lightsOnSince ? (Date.now() - lightsOnSince) / 3600000 : null;
-  document.getElementById("session-time").textContent = elapsed !== null ? elapsed.toFixed(1) : "—";
-
-  // online dot
+  // Online dot
   const dot = document.getElementById("status-dot");
   if (dot) dot.className = "status-dot " + (isOnline ? "online" : "offline");
 
-  // last sync time
+  // Last sync
   const syncEl = document.getElementById("last-sync-time");
   if (syncEl) syncEl.textContent = lastSyncTime || "—";
+
+  // Duration 503
+  const dur503 = getRoomDuration(Object.keys(SWITCH_MAP_503));
+  const f503 = fmtHours(dur503);
+  const el503 = document.getElementById("duration-503");
+  const unit503 = document.getElementById("duration-503-unit");
+  if (el503) el503.textContent = f503.val;
+  if (unit503) unit503.textContent = f503.unit;
+  const card503 = document.getElementById("duration-503-card");
+  if (card503) card503.className = `stat-card${dur503 !== null ? " active" : ""}`;
+
+  // Duration 504
+  const dur504 = getRoomDuration(Object.keys(SWITCH_MAP_504));
+  const f504 = fmtHours(dur504);
+  const el504 = document.getElementById("duration-504");
+  const unit504 = document.getElementById("duration-504-unit");
+  if (el504) el504.textContent = f504.val;
+  if (unit504) unit504.textContent = f504.unit;
+  const card504 = document.getElementById("duration-504-card");
+  if (card504) card504.className = `stat-card${dur504 !== null ? " active" : ""}`;
+
+  // Longest on
+  const longestEl = document.getElementById("longest-on-name");
+  if (longestEl) longestEl.textContent = getLongestOnSwitch() || "—";
 
   // AC summary
   const acOnCount = [...AC_UNITS.mainZone, ...AC_UNITS.newZone].filter(a => acState[a.id]).length;
@@ -785,6 +875,13 @@ function renderStats() {
   if (acEl) acEl.textContent = acOnCount;
   const acCard = document.getElementById("ac-summary-card");
   if (acCard) acCard.className = `stat-card${acOnCount > 0 ? " active" : ""}`;
+
+  // AC per room detail
+  const acDetailEl = document.getElementById("ac-room-detail");
+  if (acDetailEl) {
+    const fmt = d => d !== null ? `${fmtHours(d).val}${fmtHours(d).unit}` : "ปิด";
+    acDetailEl.textContent = `503: ${fmt(getRoomAcDuration("newZone"))}  ·  504: ${fmt(getRoomAcDuration("mainZone"))}`;
+  }
 }
 
 function renderAll() {
@@ -807,8 +904,7 @@ async function refresh() {
     const data = await fetchAllState();
     applyDeviceState(data);
     isOnline = true;
-    const now = new Date();
-    lastSyncTime = now.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    lastSyncTime = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     renderAll();
   } catch (e) {
     isOnline = false;
@@ -817,13 +913,23 @@ async function refresh() {
   }
 }
 
+async function refreshLogs() {
+  try {
+    const r = await fetch("/switches/logs");
+    if (!r.ok) return;
+    const data = await r.json();
+    processLogs(data);
+    renderStats();
+  } catch (_) {}
+}
+
 async function init() {
   await refresh();
+  await refreshLogs();
   document.getElementById("loading-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
-  // Poll every 10 s
   setInterval(refresh, 10000);
-  // Update session timer every minute
+  setInterval(refreshLogs, 5 * 60 * 1000);
   setInterval(renderStats, 60000);
 }
 
