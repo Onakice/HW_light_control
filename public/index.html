@@ -307,12 +307,173 @@
       display: none;
       box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     }
+
+    /* ══════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════ */
+
+    /* Hide tablet-only toggle on desktop */
+    #right-drawer-toggle { display: none; }
+
+    /* ── Drawer overlay (mobile/tablet) ── */
+    .drawer-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 49;
+      background: rgba(0,0,0,0.35);
+    }
+    .drawer-overlay.open { display: block; }
+
+    /* ── Mobile bottom nav ── */
+    #mobile-nav {
+      display: none;
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+      background: #fff;
+      border-top: 1px solid #f0f0f4;
+      padding: 0 8px env(safe-area-inset-bottom, 8px);
+      height: 58px;
+      align-items: center;
+      justify-content: space-around;
+    }
+    .mnav-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      flex: 1; padding: 8px 4px;
+      background: none; border: none; cursor: pointer;
+      color: #9ca3af; font-size: 0.55rem; font-weight: 700;
+      transition: color 0.15s;
+    }
+    .mnav-btn.active { color: #2563eb; }
+    .mnav-btn svg { width: 20px; height: 20px; }
+
+    /* ─ tablet: 769–1199 ─ */
+    @media (max-width: 1199px) {
+      /* Right sidebar becomes a slide-in drawer */
+      .sidebar-right {
+        position: fixed; top: 0; right: 0; z-index: 50;
+        height: 100vh; width: 280px;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        box-shadow: -4px 0 24px rgba(0,0,0,0.1);
+      }
+      .sidebar-right.open { transform: translateX(0); }
+
+      /* Floating toggle button */
+      #right-drawer-toggle {
+        display: flex;
+        position: fixed; top: 16px; right: 16px; z-index: 51;
+        width: 40px; height: 40px; border-radius: 12px;
+        background: #2563eb; color: #fff;
+        border: none; cursor: pointer;
+        align-items: center; justify-content: center;
+        box-shadow: 0 4px 12px rgba(37,99,235,0.35);
+      }
+
+      .rooms-card {
+        flex-direction: column;
+        border-radius: 20px;
+      }
+      .room-503, .room-504 {
+        min-width: unset;
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #f0f0f4;
+      }
+      .room-504 { border-bottom: none; }
+
+      .switch-grid-504 { grid-template-columns: repeat(4, 1fr); }
+      .light-grid-504  { grid-template-columns: repeat(4, 72px); }
+      .ac-grid-504     { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ─ mobile: ≤ 768 ─ */
+    @media (max-width: 768px) {
+      /* Hide left sidebar — show its content in bottom-sheet / mobile-nav */
+      .sidebar:not(.sidebar-right) {
+        position: fixed; top: 0; left: 0; z-index: 50;
+        height: 100vh; width: 280px;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.1);
+      }
+      .sidebar:not(.sidebar-right).open { transform: translateX(0); }
+
+      #right-drawer-toggle { display: none; }
+      #mobile-nav { display: flex; }
+
+      #app { padding-bottom: 58px; }
+
+      .main-header {
+        padding: 12px 16px;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .main-header h2 { font-size: 0.72rem; }
+
+      .rooms-wrap { padding: 12px; }
+
+      .room { padding: 16px 12px; }
+      .room-503, .room-504 {
+        min-width: unset; width: 100%;
+        border-right: none; border-bottom: 1px solid #f0f0f4;
+      }
+      .room-504 { border-bottom: none; }
+
+      /* Switch grids: 4 columns each on mobile */
+      .switch-grid-503 { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+      .switch-grid-504 { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+
+      /* Light grids: smaller cells, 2 cols for 503, 4 for 504 */
+      .light-grid-503 { grid-template-columns: repeat(2, 64px); gap: 12px 20px; }
+      .light-grid-504 { grid-template-columns: repeat(4, 64px); gap: 12px 10px; }
+      .light-cell { width: 64px; height: 80px; }
+
+      /* AC grids: 2 columns */
+      .ac-grid-503 { grid-template-columns: repeat(2, 1fr); }
+      .ac-grid-504 { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .ac-card { padding: 14px 6px; }
+
+      .rooms-card { border-radius: 16px; }
+    }
+
+    /* ─ very small: ≤ 480 ─ */
+    @media (max-width: 480px) {
+      .light-grid-504 { grid-template-columns: repeat(4, 56px); gap: 10px 6px; }
+      .light-cell { width: 56px; height: 70px; }
+      .rooms-wrap { padding: 8px; }
+    }
   </style>
 </head>
 <body>
 
 <div id="loading-screen">กำลังเชื่อมต่อระบบ SmartControl…</div>
 <div id="toast"></div>
+
+<!-- Drawer overlay (closes any open drawer on tap) -->
+<div class="drawer-overlay" id="drawer-overlay"></div>
+
+<!-- Floating right-sidebar toggle (tablet only) -->
+<button id="right-drawer-toggle" aria-label="เมนูควบคุม" onclick="toggleRightDrawer()">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+
+<!-- Mobile bottom nav -->
+<nav id="mobile-nav">
+  <button class="mnav-btn active" id="mnav-home" onclick="mnavSwitch('home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    หน้าหลัก
+  </button>
+  <button class="mnav-btn" id="mnav-stats" onclick="mnavSwitch('stats')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    สถิติ
+  </button>
+  <button class="mnav-btn" id="mnav-ctrl" onclick="mnavSwitch('ctrl')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+    ควบคุม
+  </button>
+  <button class="mnav-btn" onclick="refresh(); refreshLogs()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    รีเฟรช
+  </button>
+</nav>
 
 <div id="app" style="display:none">
 
@@ -978,6 +1139,39 @@ async function init() {
 }
 
 init();
+
+// ── Drawer / mobile nav ──────────────────────────────────────────────────────
+const leftSidebar  = document.querySelector('.sidebar:not(.sidebar-right)');
+const rightSidebar = document.querySelector('.sidebar-right');
+const overlay      = document.getElementById('drawer-overlay');
+
+function closeAllDrawers() {
+  leftSidebar.classList.remove('open');
+  rightSidebar.classList.remove('open');
+  overlay.classList.remove('open');
+}
+
+overlay.addEventListener('click', closeAllDrawers);
+
+function toggleRightDrawer() {
+  const isOpen = rightSidebar.classList.toggle('open');
+  overlay.classList.toggle('open', isOpen);
+  if (isOpen) leftSidebar.classList.remove('open');
+}
+
+function toggleLeftDrawer() {
+  const isOpen = leftSidebar.classList.toggle('open');
+  overlay.classList.toggle('open', isOpen);
+  if (isOpen) rightSidebar.classList.remove('open');
+}
+
+function mnavSwitch(tab) {
+  document.querySelectorAll('.mnav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mnav-' + tab)?.classList.add('active');
+  closeAllDrawers();
+  if (tab === 'stats')  { toggleLeftDrawer(); }
+  if (tab === 'ctrl')   { toggleRightDrawer(); }
+}
 </script>
 </body>
 </html>
