@@ -234,6 +234,17 @@
     }
     .row-space { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
 
+    /* ── Status dot ── */
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #d1d5db;
+      display: inline-block;
+      flex-shrink: 0;
+      transition: background 0.4s;
+    }
+    .status-dot.online  { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+    .status-dot.offline { background: #ef4444; }
+
     /* ── Error toast ── */
     #toast {
       position: fixed; bottom: 24px; right: 24px; z-index: 200;
@@ -255,7 +266,10 @@
   <!-- ── Left Sidebar ── -->
   <aside class="sidebar">
     <div class="sidebar-brand">
-      <h1>SmartControl</h1>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <h1>SmartControl</h1>
+        <span class="status-dot" id="status-dot"></span>
+      </div>
       <p>ระบบบริหารจัดการพลังงาน</p>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px;">
@@ -275,13 +289,29 @@
         <div><span class="stat-value" id="lights-on-count">0</span><span class="stat-unit">ดวง</span></div>
         <div class="stat-label">เปิดไฟทิ้งไว้</div>
       </div>
-      <!-- Session time (static) -->
+      <!-- Session time -->
       <div class="stat-card">
         <div class="stat-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
         </div>
         <div><span class="stat-value" id="session-time">0.0</span><span class="stat-unit">ชม.</span></div>
         <div class="stat-label">ระยะเวลาใช้งานวันนี้</div>
+      </div>
+      <!-- Last sync -->
+      <div class="stat-card">
+        <div class="stat-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </div>
+        <div><span class="stat-value" style="font-size:0.95rem;letter-spacing:-0.3px;" id="last-sync-time">—</span></div>
+        <div class="stat-label">อัปเดตล่าสุด</div>
+      </div>
+      <!-- AC summary -->
+      <div class="stat-card" id="ac-summary-card">
+        <div class="stat-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-12m12 4h-12m12-8h-12"/></svg>
+        </div>
+        <div><span class="stat-value" id="ac-on-count">0</span><span class="stat-unit">/ 6 ตัว</span></div>
+        <div class="stat-label">แอร์เปิดอยู่</div>
       </div>
     </div>
   </aside>
@@ -389,9 +419,19 @@
         <button class="btn btn-secondary" onclick="setAllLights(false)">ปิดทั้งหมด</button>
       </div>
     </div>
+    <div>
+      <button class="btn btn-secondary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="refresh()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        รีเฟรชเดี๋ยวนี้
+      </button>
+    </div>
     <div style="border-top:1px solid #f0f0f4;padding-top:20px;">
-      <div class="ctrl-label">ควบคุมตามแถว (504)</div>
+      <div class="ctrl-label">ควบคุมโซน (504)</div>
       <div class="row-space" id="row-controls"></div>
+    </div>
+    <div style="border-top:1px solid #f0f0f4;padding-top:20px;">
+      <div class="ctrl-label">ควบคุมโซน (503)</div>
+      <div class="row-space" id="zone-controls-503"></div>
     </div>
   </aside>
 
@@ -467,7 +507,9 @@ Object.keys(SWITCH_TO_DEVICE).forEach(k => { switchState[k] = null; });
 const acState = {};
 [...AC_UNITS.mainZone, ...AC_UNITS.newZone].forEach(a => { acState[a.id] = false; });
 
-const sessionStart = Date.now();
+let lastSyncTime = null;
+let isOnline = false;
+let lightsOnSince = null;
 
 // ══════════════════════════════════════════════════════════════════════════════
 // HELPERS
@@ -548,14 +590,6 @@ async function toggleSwitch(swName) {
 
   try {
     await sendCommand(swName, targetState);
-    // Confirm real state after 1s
-    setTimeout(async () => {
-      try {
-        const data = await fetchAllState();
-        applyDeviceState(data);
-        renderAll();
-      } catch (_) {}
-    }, 1000);
   } catch (e) {
     switchState[swName] = currentState; // revert
     renderAll();
@@ -686,25 +720,71 @@ function renderRowControls() {
   [6, 5, 4, 3, 2, 1, 0].forEach(col => {
     const colLights = lights504.filter((_, i) => i % 7 === col);
     const onCount = colLights.filter(Boolean).length;
+    const zoneName = `zone-${7 - col}`;
+    const isOn = switchState[zoneName] === true;
     const btn = document.createElement("button");
     btn.className = "row-btn";
     btn.onclick = () => toggleColumn(col);
     btn.innerHTML = `
       <div class="row-btn-text">
-        <div class="row-btn-name">แถวที่ ${7 - col}</div>
-        <div class="row-btn-count">${onCount}/${colLights.length} เปิด</div>
+        <div class="row-btn-name">${zoneName}</div>
+        <div class="row-btn-count">${onCount}/${colLights.length} ดวงเปิด</div>
       </div>
-      <div class="row-btn-icon">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>
+      <div class="row-btn-icon" style="${isOn ? "background:#fcd34d;color:#92400e;" : ""}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+      </div>`;
+    container.appendChild(btn);
+  });
+}
+
+function render503Controls() {
+  const container = document.getElementById("zone-controls-503");
+  if (!container) return;
+  container.innerHTML = "";
+  const lights503 = deriveLights(SWITCH_MAP_503, 8);
+  Object.keys(SWITCH_MAP_503).slice().reverse().forEach(swId => {
+    const indices = SWITCH_MAP_503[swId];
+    const onCount = indices.filter(i => lights503[i]).length;
+    const isOn = switchState[swId] === true;
+    const btn = document.createElement("button");
+    btn.className = "row-btn";
+    btn.onclick = () => toggleSwitch(swId);
+    btn.innerHTML = `
+      <div class="row-btn-text">
+        <div class="row-btn-name">${swId}</div>
+        <div class="row-btn-count">${onCount}/${indices.length} ดวงเปิด</div>
+      </div>
+      <div class="row-btn-icon" style="${isOn ? "background:#fcd34d;color:#92400e;" : ""}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
       </div>`;
     container.appendChild(btn);
   });
 }
 
 function renderStats() {
-  document.getElementById("lights-on-count").textContent = countLightsOn();
-  const elapsed = (Date.now() - sessionStart) / 3600000;
-  document.getElementById("session-time").textContent = elapsed.toFixed(1);
+  const onCount = countLightsOn();
+  document.getElementById("lights-on-count").textContent = onCount;
+
+  // track lights-on duration
+  if (onCount > 0 && !lightsOnSince) lightsOnSince = Date.now();
+  if (onCount === 0) lightsOnSince = null;
+  const elapsed = lightsOnSince ? (Date.now() - lightsOnSince) / 3600000 : null;
+  document.getElementById("session-time").textContent = elapsed !== null ? elapsed.toFixed(1) : "—";
+
+  // online dot
+  const dot = document.getElementById("status-dot");
+  if (dot) dot.className = "status-dot " + (isOnline ? "online" : "offline");
+
+  // last sync time
+  const syncEl = document.getElementById("last-sync-time");
+  if (syncEl) syncEl.textContent = lastSyncTime || "—";
+
+  // AC summary
+  const acOnCount = [...AC_UNITS.mainZone, ...AC_UNITS.newZone].filter(a => acState[a.id]).length;
+  const acEl = document.getElementById("ac-on-count");
+  if (acEl) acEl.textContent = acOnCount;
+  const acCard = document.getElementById("ac-summary-card");
+  if (acCard) acCard.className = `stat-card${acOnCount > 0 ? " active" : ""}`;
 }
 
 function renderAll() {
@@ -714,6 +794,7 @@ function renderAll() {
   renderLightGrid("light-grid-504", SWITCH_MAP_504, 28);
   renderAc();
   renderRowControls();
+  render503Controls();
   renderStats();
 }
 
@@ -725,8 +806,13 @@ async function refresh() {
   try {
     const data = await fetchAllState();
     applyDeviceState(data);
+    isOnline = true;
+    const now = new Date();
+    lastSyncTime = now.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     renderAll();
   } catch (e) {
+    isOnline = false;
+    renderStats();
     showToast("ไม่สามารถเชื่อมต่อ backend ได้");
   }
 }
